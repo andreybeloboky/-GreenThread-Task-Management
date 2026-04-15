@@ -53,11 +53,26 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
+        task.update();
+        PrintWriter test = resp.getWriter();
+        test.println("<html>");
+        test.println("<h1>" + "update success" + "</h1>");
+        test.println("</html>");
     }
 
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
+        String idParam = req.getParameter("id");
+        if (idParam == null) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter");
+            return;
+        }
+        int id = Integer.parseInt(idParam);
+        boolean deleted = task.delete(id);
+        if (deleted) {
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        } else {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Task not found");
+        }
     }
 }

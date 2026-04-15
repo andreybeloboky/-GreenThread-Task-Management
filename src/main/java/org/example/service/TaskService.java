@@ -7,7 +7,7 @@ import java.util.ArrayList;
 
 public class TaskService {
 
-    private JDBCRepository JDBCRepository;
+    private final JDBCRepository JDBCRepository;
 
     public TaskService() {
         this.JDBCRepository = new JDBCRepository();
@@ -19,5 +19,13 @@ public class TaskService {
 
     public void createTask() {
         this.JDBCRepository.insert();
+    }
+
+    public void update() {
+        this.JDBCRepository.setUpdate();
+    }
+
+    public boolean delete(int id){
+        return this.JDBCRepository.delete(id);
     }
 }

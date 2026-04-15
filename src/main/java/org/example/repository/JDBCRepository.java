@@ -15,11 +15,13 @@ import java.util.ArrayList;
 public class JDBCRepository {
 
     private final HikariDataSource dataSource;
-    private static final String URL = "jdbc:postgresql://localhost:5435/postgres";
-    private static final String LOGIN = "postgres";
-    private static final String PASSWORD = "passwordForTask";
-    private static final String SELECT = "SELECT * FROM tasks";
+    private static final String URL = System.getenv("DB_URL_TASK");
+    private static final String LOGIN = System.getenv("DB_LOGIN");
+    private static final String PASSWORD = System.getenv("DB_PASSWORD_TASK");
+    private static final String SELECT = "SELECT * FROM tasks t ORDER BY t.id";
     private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?)";
+    private static final String UPDATE = "UPDATE tasks SET status = ? WHERE id = ?";
+    private static final String DELETE = "DELETE FROM tasks WHERE id = ?";
 
     public JDBCRepository() {
         HikariConfig config = new HikariConfig();
@@ -59,8 +61,29 @@ public class JDBCRepository {
             preparedStatement.setString(3, "PENDING");
             LocalDateTime dateTime = LocalDateTime.of(2026, 4, 17, 14, 30);
             preparedStatement.setTimestamp(4, Timestamp.valueOf(dateTime));
-            int rs = preparedStatement.executeUpdate();
-            System.out.println(rs);
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataAccessException("crush", e);
+        }
+    }
+
+    public void setUpdate() {
+        try (Connection connection = openConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(UPDATE)) {
+            preparedStatement.setString(1, "COMPLETED");
+            preparedStatement.setInt(2, 1);
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataAccessException("crush", e);
+        }
+    }
+
+    public boolean delete(int id) {
+        try (Connection connection = openConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(DELETE)) {
+            preparedStatement.setInt(1, id);
+            int rows = preparedStatement.executeUpdate();
+            return rows != 0;
         } catch (SQLException e) {
             throw new DataAccessException("crush", e);
         }
