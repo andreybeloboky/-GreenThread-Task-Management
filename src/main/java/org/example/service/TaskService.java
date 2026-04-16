@@ -2,7 +2,6 @@ package org.example.service;
 
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import org.example.DTO.TaskDTO;
@@ -17,9 +16,9 @@ public class TaskService {
     private final JDBCRepository repo;
     private final Validator validator;
 
-    public TaskService(HikariDataSource ds, ValidatorFactory factory) {
+    public TaskService(HikariDataSource ds, Validator validatorIn) {
         this.repo = new JDBCRepository(ds);
-        this.validator = factory.getValidator();
+        this.validator = validatorIn;
     }
 
     public ArrayList<TaskDTO> takeAllElements() {
@@ -40,7 +39,8 @@ public class TaskService {
         return true;
     }
 
-    public boolean update(TaskDTO task) {
+    public boolean update(int id) {
+        TaskDTO task =
         this.repo.setUpdate();
         return true;
     }

@@ -8,6 +8,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import org.example.DTO.TaskDTO;
 import org.example.service.TaskService;
@@ -26,7 +27,7 @@ public class TaskServlet extends HttpServlet {
         super.init(config);
         try {
             HikariDataSource ds = (HikariDataSource) getServletContext().getAttribute("datasource");
-            ValidatorFactory val = (ValidatorFactory) getServletContext().getAttribute("validator");
+            Validator val = (Validator) getServletContext().getAttribute("validator");
             task = new TaskService(ds,val);
         } catch (Exception e) {
             throw new ServletException("Failed to initialize the library", e);
@@ -57,11 +58,8 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String nameTitle = req.getParameter("title");
-        String description = req.getParameter("description");
-        String status = req.getParameter("status");
-        String deadline = req.getParameter("dueDate");
-        boolean updateData = task.update(nameTitle, description, status, deadline);
+        int id = Integer.parseInt(req.getParameter("id"));
+        boolean updateData = task.update(id);
         if (updateData) {
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } else {
