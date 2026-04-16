@@ -6,7 +6,6 @@ import org.example.DTO.TaskDTO;
 import org.example.exception.DataAccessException;
 
 import java.sql.*;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Objects;
 
@@ -16,7 +15,7 @@ public class JDBCRepository {
     private final HikariDataSource dataSource;
     private static final String SELECT = "SELECT * FROM tasks t ORDER BY t.id";
     private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?)";
-    private static final String UPDATE = "UPDATE tasks SET status = ? WHERE id = ?";
+    private static final String UPDATE = "UPDATE tasks SET status = ? WHERE id = ? FOR UPDATE";
     private static final String DELETE = "DELETE FROM tasks WHERE id = ?";
 
     public JDBCRepository(HikariDataSource dataSource) {
@@ -43,16 +42,16 @@ public class JDBCRepository {
         return list;
     }
 
-    public void insert(String title, String description, String status, LocalDateTime dateTime) {
+    public void insert(TaskDTO task) {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT)) {
-            preparedStatement.setString(1, title);
-            preparedStatement.setString(2, description);
-            preparedStatement.setString(3, Objects.requireNonNullElse(status, "PENDING"));
-            preparedStatement.setTimestamp(4, Timestamp.valueOf(dateTime));
+            preparedStatement.setString(1, task.getTitle());
+            preparedStatement.setString(2, task.getDescription());
+            preparedStatement.setString(3, Objects.requireNonNullElse(task.getStatus(), "PENDING"));
+            preparedStatement.setTimestamp(4, Timestamp.valueOf(task.getDate()));
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            throw new DataAccessException("crush", e);
+            throw new DataAccessException("Incorrect data", e);
         }
     }
 

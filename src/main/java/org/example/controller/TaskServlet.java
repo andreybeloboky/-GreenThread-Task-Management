@@ -8,6 +8,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ValidatorFactory;
 import org.example.DTO.TaskDTO;
 import org.example.service.TaskService;
 
@@ -25,9 +26,10 @@ public class TaskServlet extends HttpServlet {
         super.init(config);
         try {
             HikariDataSource ds = (HikariDataSource) getServletContext().getAttribute("datasource");
-            task = new TaskService(ds);
+            ValidatorFactory val = (ValidatorFactory) getServletContext().getAttribute("validator");
+            task = new TaskService(ds,val);
         } catch (Exception e) {
-            throw new ServletException("Не удалось инициализировать библиотеку", e);
+            throw new ServletException("Failed to initialize the library", e);
         }
     }
 
@@ -44,11 +46,8 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String title = req.getParameter("title");
-        String description = req.getParameter("description");
-        String date = req.getParameter("dueDate");
-        String status = req.getParameter("status");
-        boolean create = task.createTask(title, description, status, date);
+        boolean create = task.createTask(req.getParameter("title"), req.getParameter("description"),
+                req.getParameter("dueDate"), req.getParameter("status"));
         if (create) {
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } else {
@@ -58,7 +57,16 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        task.update();
+        String nameTitle = req.getParameter("title");
+        String description = req.getParameter("description");
+        String status = req.getParameter("status");
+        String deadline = req.getParameter("dueDate");
+        boolean updateData = task.update(nameTitle, description, status, deadline);
+        if (updateData) {
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        } else {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameters aren't correct");
+        }
     }
 
     @Override
