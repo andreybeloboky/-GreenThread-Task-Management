@@ -4,6 +4,8 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.example.DTO.TaskDTO;
 import org.example.repository.JDBCRepository;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
 public class TaskService {
@@ -18,14 +20,13 @@ public class TaskService {
         return repo.getList();
     }
 
-    public boolean createTask(String title, String description, String dueDate) {
-        if(title.length() < 5 || title.length() > 100){
+    public boolean createTask(String title, String description, String status, String dueDate) {
+        LocalDateTime parsedDateTime = LocalDateTime.parse(dueDate);
+        LocalDateTime now = LocalDateTime.now();
+        if (title.length() < 5 || title.length() > 100 || description.length() > 500 || !parsedDateTime.isAfter(now)) {
             return false;
         }
-        if(description.length()>500){
-            return false;
-        }
-        this.repo.insert();
+        this.repo.insert(title, description, status, parsedDateTime);
         return true;
     }
 
@@ -33,7 +34,7 @@ public class TaskService {
         this.repo.setUpdate();
     }
 
-    public boolean delete(int id){
+    public boolean delete(int id) {
         return this.repo.delete(id);
     }
 }

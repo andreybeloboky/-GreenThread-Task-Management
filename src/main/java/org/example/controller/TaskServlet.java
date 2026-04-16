@@ -33,7 +33,6 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-
         ArrayList<TaskDTO> data = task.takeAllElements();
         PrintWriter test = resp.getWriter();
         for (TaskDTO allData : data) {
@@ -47,28 +46,19 @@ public class TaskServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String title = req.getParameter("title");
         String description = req.getParameter("description");
-        String date = req.getParameter("duedate");
-        boolean create = task.createTask(title, description, date);
+        String date = req.getParameter("dueDate");
+        String status = req.getParameter("status");
+        boolean create = task.createTask(title, description, status, date);
         if (create) {
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } else {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameters aren't correct");
         }
-
-
-        PrintWriter test = resp.getWriter();
-        test.println("<html>");
-        test.println("<h1>" + "insert success" + "</h1>");
-        test.println("</html>");
     }
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         task.update();
-        PrintWriter test = resp.getWriter();
-        test.println("<html>");
-        test.println("<h1>" + "update success" + "</h1>");
-        test.println("</html>");
     }
 
     @Override

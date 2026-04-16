@@ -8,6 +8,7 @@ import org.example.exception.DataAccessException;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Objects;
 
 @Slf4j
 public class JDBCRepository {
@@ -42,13 +43,12 @@ public class JDBCRepository {
         return list;
     }
 
-    public void insert() {
+    public void insert(String title, String description, String status, LocalDateTime dateTime) {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT)) {
-            preparedStatement.setString(1, "Task 4");
-            preparedStatement.setString(2, "Nothing");
-            preparedStatement.setString(3, "PENDING");
-            LocalDateTime dateTime = LocalDateTime.of(2026, 4, 17, 14, 30);
+            preparedStatement.setString(1, title);
+            preparedStatement.setString(2, description);
+            preparedStatement.setString(3, Objects.requireNonNullElse(status, "PENDING"));
             preparedStatement.setTimestamp(4, Timestamp.valueOf(dateTime));
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
