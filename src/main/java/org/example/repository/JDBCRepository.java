@@ -1,13 +1,11 @@
 package org.example.repository;
 
-import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.example.DTO.TaskDTO;
 import org.example.exception.DataAccessException;
 
 import java.sql.*;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
@@ -15,22 +13,13 @@ import java.util.ArrayList;
 public class JDBCRepository {
 
     private final HikariDataSource dataSource;
-    private static final String URL = System.getenv("DB_URL_TASK");
-    private static final String LOGIN = System.getenv("DB_LOGIN");
-    private static final String PASSWORD = System.getenv("DB_PASSWORD_TASK");
     private static final String SELECT = "SELECT * FROM tasks t ORDER BY t.id";
     private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?)";
     private static final String UPDATE = "UPDATE tasks SET status = ? WHERE id = ?";
     private static final String DELETE = "DELETE FROM tasks WHERE id = ?";
 
-    public JDBCRepository() {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(URL);
-        config.setUsername(LOGIN);
-        config.setPassword(PASSWORD);
-        config.setMaximumPoolSize(10);
-        config.setDriverClassName("org.postgresql.Driver");
-        dataSource = new HikariDataSource(config);
+    public JDBCRepository(HikariDataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     public ArrayList<TaskDTO> getList() {
@@ -99,7 +88,6 @@ public class JDBCRepository {
             throw new DataAccessException("Impossible connect with database", e);
         }
     }
-
 }
 
 

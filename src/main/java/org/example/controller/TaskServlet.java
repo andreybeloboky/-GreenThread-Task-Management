@@ -1,6 +1,7 @@
 package org.example.controller;
 
 
+import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -23,7 +24,8 @@ public class TaskServlet extends HttpServlet {
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         try {
-            task = new TaskService();
+            HikariDataSource ds = (HikariDataSource) getServletContext().getAttribute("datasource");
+            task = new TaskService(ds);
         } catch (Exception e) {
             throw new ServletException("Не удалось инициализировать библиотеку", e);
         }
@@ -31,6 +33,7 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+
         ArrayList<TaskDTO> data = task.takeAllElements();
         PrintWriter test = resp.getWriter();
         for (TaskDTO allData : data) {
@@ -42,11 +45,19 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String s = req.getParameter("title");
-        task.createTask();
+        String title = req.getParameter("title");
+        String description = req.getParameter("description");
+        String date = req.getParameter("duedate");
+        boolean create = task.createTask(title, description, date);
+        if (create) {
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        } else {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameters aren't correct");
+        }
+
+
         PrintWriter test = resp.getWriter();
         test.println("<html>");
-        test.println("<h1>" + s + "</h1>");
         test.println("<h1>" + "insert success" + "</h1>");
         test.println("</html>");
     }
