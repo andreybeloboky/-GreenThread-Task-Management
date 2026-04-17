@@ -3,7 +3,6 @@ package org.example.service;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
 import org.example.DTO.TaskDTO;
 import org.example.repository.JDBCRepository;
 
@@ -40,7 +39,7 @@ public class TaskService {
     }
 
     public boolean update(int id) {
-        TaskDTO task =
+        TaskDTO task = repo.getTask(id);
         this.repo.setUpdate();
         return true;
     }

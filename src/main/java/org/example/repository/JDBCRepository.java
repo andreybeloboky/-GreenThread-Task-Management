@@ -6,6 +6,7 @@ import org.example.DTO.TaskDTO;
 import org.example.exception.DataAccessException;
 
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Objects;
 
@@ -14,6 +15,7 @@ public class JDBCRepository {
 
     private final HikariDataSource dataSource;
     private static final String SELECT = "SELECT * FROM tasks t ORDER BY t.id";
+    private static final String SELECT_ID = "SELECT * FROM tasks t WHERE id = ?";
     private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?)";
     private static final String UPDATE = "UPDATE tasks SET status = ? WHERE id = ? FOR UPDATE";
     private static final String DELETE = "DELETE FROM tasks WHERE id = ?";
@@ -28,19 +30,38 @@ public class JDBCRepository {
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT);
              ResultSet rs = preparedStatement.executeQuery()) {
             while (rs.next()) {
-                TaskDTO obj = new TaskDTO();
-                obj.setTitle(rs.getString(2));
-                obj.setDescription(rs.getString(3));
-                obj.setStatus(rs.getString(4));
-                obj.setDate(rs.getDate(5));
+                TaskDTO obj = getElement(rs);
                 list.add(obj);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-
         return list;
     }
+
+    public TaskDTO getTask(int id) {
+        try (Connection conn = openConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID);
+             ResultSet rs = preparedStatement.executeQuery()) {
+            preparedStatement.setInt(1, id);
+            rs.next();
+            return getElement(rs);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private TaskDTO getElement(ResultSet rs) throws SQLException {
+        TaskDTO obj = new TaskDTO();
+        obj.setTitle(rs.getString(2));
+        obj.setDescription(rs.getString(3));
+        obj.setStatus(rs.getString(4));
+        Date date = rs.getDate(5);
+        LocalDateTime localDate = LocalDateTime.parse((CharSequence) date);
+        obj.setDate(localDate);
+        return obj;
+    }
+
 
     public void insert(TaskDTO task) {
         try (Connection connection = openConnection();
