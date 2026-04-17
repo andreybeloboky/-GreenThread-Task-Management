@@ -56,8 +56,8 @@ public class JDBCRepository {
         obj.setTitle(rs.getString(2));
         obj.setDescription(rs.getString(3));
         obj.setStatus(rs.getString(4));
-        Date date = rs.getDate(5);
-        LocalDateTime localDate = LocalDateTime.parse((CharSequence) date);
+        Timestamp ts = rs.getTimestamp(5);
+        LocalDateTime localDate = ts.toLocalDateTime();
         obj.setDate(localDate);
         return obj;
     }

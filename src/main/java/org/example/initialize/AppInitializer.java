@@ -8,8 +8,10 @@ import jakarta.servlet.annotation.WebListener;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import lombok.extern.slf4j.Slf4j;
 
 @WebListener
+@Slf4j
 public class AppInitializer implements ServletContextListener {
 
     private HikariDataSource dataSource;
@@ -20,6 +22,7 @@ public class AppInitializer implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
+        log.debug("dataSource works");
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(URL);
         config.setUsername(LOGIN);
@@ -28,6 +31,7 @@ public class AppInitializer implements ServletContextListener {
         config.setDriverClassName("org.postgresql.Driver");
         dataSource = new HikariDataSource(config);
         sce.getServletContext().setAttribute("datasource", dataSource);
+
         factory = Validation.buildDefaultValidatorFactory();
         Validator validator = factory.getValidator();
         sce.getServletContext().setAttribute("validator", validator);
