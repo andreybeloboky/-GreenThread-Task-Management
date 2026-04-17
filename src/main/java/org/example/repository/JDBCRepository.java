@@ -41,9 +41,9 @@ public class JDBCRepository {
 
     public TaskDTO getTask(int id) {
         try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID);
-             ResultSet rs = preparedStatement.executeQuery()) {
+             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID)) {
             preparedStatement.setInt(1, id);
+            ResultSet rs = preparedStatement.executeQuery();
             rs.next();
             return getElement(rs);
         } catch (SQLException e) {

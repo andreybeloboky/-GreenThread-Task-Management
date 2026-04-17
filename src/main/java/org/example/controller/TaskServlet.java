@@ -9,7 +9,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
 import org.example.DTO.TaskDTO;
 import org.example.service.TaskService;
 
