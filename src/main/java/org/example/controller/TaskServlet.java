@@ -1,6 +1,9 @@
 package org.example.controller;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
@@ -27,7 +30,7 @@ public class TaskServlet extends HttpServlet {
         try {
             HikariDataSource ds = (HikariDataSource) getServletContext().getAttribute("datasource");
             Validator val = (Validator) getServletContext().getAttribute("validator");
-            task = new TaskService(ds,val);
+            task = new TaskService(ds, val);
         } catch (Exception e) {
             throw new ServletException("Failed to initialize the library", e);
         }
@@ -36,12 +39,15 @@ public class TaskServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         ArrayList<TaskDTO> data = task.takeAllElements();
-        PrintWriter test = resp.getWriter();
-        for (TaskDTO allData : data) {
-            test.println("<html>");
-            test.println("<h1>" + allData.getTitle() + " " + allData.getDescription() + " " + allData.getStatus() + " " + allData.getDate() + "</h1>");
-            test.println("</html>");
+        if (data.size() - 1 == 0) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Database is empty");
         }
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        mapper.writeValue(resp.getWriter(), data);
     }
 
     @Override
@@ -57,12 +63,23 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        TaskDTO up = mapper.readValue(req.getInputStream(), TaskDTO.class);
+
+
         int id = Integer.parseInt(req.getParameter("id"));
-        boolean updateData = task.update(id);
+        boolean updateData = task.update(id, up);
         if (updateData) {
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+            resp.setContentType("application/json");
+            resp.setCharacterEncoding("UTF-8");
+
+            //     ResponseDto response = new ResponseDto("Task updated");
+            //   mapper.writeValue(resp.getWriter(), response);
         } else {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameters aren't correct");
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
+            resp.setContentType("application/json");
+            resp.getWriter().write("{\"error\": \"Invalid parameters\"}");
         }
     }
 

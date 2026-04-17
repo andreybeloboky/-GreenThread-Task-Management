@@ -38,9 +38,18 @@ public class TaskService {
         return true;
     }
 
-    public boolean update(int id) {
-        TaskDTO task = repo.getTask(id);
-        this.repo.setUpdate();
+    public boolean update(int id, TaskDTO task) {
+        TaskDTO oldTask = repo.findById(id);
+
+
+
+        if (oldTask == null) return false;
+        if(task.getStatus().equals("PENDING")){
+            this.repo.setUpdate(task);
+        }
+
+
+        this.repo.setUpdate(task);
         return true;
     }
 

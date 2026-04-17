@@ -39,7 +39,7 @@ public class JDBCRepository {
         return list;
     }
 
-    public TaskDTO getTask(int id) {
+    public TaskDTO findById(int id) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID)) {
             preparedStatement.setInt(1, id);
@@ -76,7 +76,7 @@ public class JDBCRepository {
         }
     }
 
-    public void setUpdate() {
+    public void setUpdate(TaskDTO task) {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(UPDATE)) {
             preparedStatement.setString(1, "COMPLETED");
