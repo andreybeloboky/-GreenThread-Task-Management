@@ -23,6 +23,7 @@ import java.util.ArrayList;
 public class TaskServlet extends HttpServlet {
 
     private TaskService task;
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -42,7 +43,6 @@ public class TaskServlet extends HttpServlet {
         if (data.size() - 1 == 0) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Database is empty");
         }
-        ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         resp.setContentType("application/json");
@@ -52,10 +52,13 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        boolean create = task.createTask(req.getParameter("title"), req.getParameter("description"),
-                req.getParameter("dueDate"), req.getParameter("status"));
-        if (create) {
-            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        TaskDTO createTask = mapper.readValue(req.getInputStream(), TaskDTO.class);
+        TaskDTO create = task.createTask(createTask);
+        if (create != null) {
+            resp.setStatus(HttpServletResponse.SC_OK);
+            resp.setContentType("application/json");
+            resp.setCharacterEncoding("UTF-8");
+            mapper.writeValue(resp.getWriter(), create);
         } else {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameters aren't correct");
         }
@@ -63,7 +66,6 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        ObjectMapper mapper = new ObjectMapper();
         TaskDTO up = mapper.readValue(req.getInputStream(), TaskDTO.class);
 
 
@@ -74,10 +76,11 @@ public class TaskServlet extends HttpServlet {
             resp.setContentType("application/json");
             resp.setCharacterEncoding("UTF-8");
 
-            //     ResponseDto response = new ResponseDto("Task updated");
-            //   mapper.writeValue(resp.getWriter(), response);
+            // ???
         } else {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
+
+            // зачем setContent ?? можно же без него
             resp.setContentType("application/json");
             resp.getWriter().write("{\"error\": \"Invalid parameters\"}");
         }

@@ -24,27 +24,21 @@ public class TaskService {
         return repo.getList();
     }
 
-    public boolean createTask(String title, String description, String status, String dueDate) {
-        TaskDTO dto = new TaskDTO();
-        dto.setTitle(title);
-        dto.setDescription(description);
-        dto.setDate(LocalDateTime.parse(dueDate));
-        dto.setStatus(status);
-        Set<ConstraintViolation<TaskDTO>> violations = validator.validate(dto);
+    public TaskDTO createTask(TaskDTO createTask) {
+        Set<ConstraintViolation<TaskDTO>> violations = validator.validate(createTask);
         if (!violations.isEmpty()) {
-            return false;
+            return null;
         }
-        repo.insert(dto);
-        return true;
+        repo.insert(createTask);
+        return createTask;
     }
 
     public boolean update(int id, TaskDTO task) {
         TaskDTO oldTask = repo.findById(id);
 
 
-
         if (oldTask == null) return false;
-        if(task.getStatus().equals("PENDING")){
+        if (task.getStatus().equals("PENDING")) {
             this.repo.setUpdate(task);
         }
 
