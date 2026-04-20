@@ -4,10 +4,11 @@ import com.zaxxer.hikari.HikariDataSource;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.example.DTO.TaskDTO;
+import org.example.controller.TaskStatus;
 import org.example.repository.JDBCRepository;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.Set;
 
 public class TaskService {
@@ -33,18 +34,18 @@ public class TaskService {
         return createTask;
     }
 
-    public boolean update(int id, TaskDTO task) {
+    public Optional<TaskDTO> update(int id, Optional<TaskDTO> task) {
         TaskDTO oldTask = repo.findById(id);
+        if (oldTask == null) return Optional.empty();
 
+        TaskStatus oldStatus = oldTask.getStatus();
+        TaskStatus newStatus = task.get().getStatus();
 
-        if (oldTask == null) return false;
-        if (task.getStatus().equals("PENDING")) {
-            this.repo.setUpdate(task);
+        if (!oldStatus.canTransitionTo(newStatus)) {
+            throw new IllegalStateException("Invalid status transition");
         }
-
-
-        this.repo.setUpdate(task);
-        return true;
+        this.repo.setUpdate(task.get(), id);
+        return task;
     }
 
     public boolean delete(int id) {

@@ -3,12 +3,14 @@ package org.example.repository;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.example.DTO.TaskDTO;
+import org.example.controller.TaskStatus;
 import org.example.exception.DataAccessException;
 
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Optional;
 
 @Slf4j
 public class JDBCRepository {
@@ -17,7 +19,7 @@ public class JDBCRepository {
     private static final String SELECT = "SELECT * FROM tasks t ORDER BY t.id";
     private static final String SELECT_ID = "SELECT * FROM tasks t WHERE id = ?";
     private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?)";
-    private static final String UPDATE = "UPDATE tasks SET status = ? WHERE id = ? FOR UPDATE";
+    private static final String UPDATE = "UPDATE tasks SET (title, description, status, duedate) VALUES (?,?,?,?) WHERE id = ? FOR UPDATE";
     private static final String DELETE = "DELETE FROM tasks WHERE id = ?";
 
     public JDBCRepository(HikariDataSource dataSource) {
@@ -55,7 +57,7 @@ public class JDBCRepository {
         TaskDTO obj = new TaskDTO();
         obj.setTitle(rs.getString(2));
         obj.setDescription(rs.getString(3));
-        obj.setStatus(rs.getString(4));
+        obj.setStatus(TaskStatus.valueOf(rs.getString(4)));
         Timestamp ts = rs.getTimestamp(5);
         LocalDateTime localDate = ts.toLocalDateTime();
         obj.setDate(localDate);
@@ -68,7 +70,7 @@ public class JDBCRepository {
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT)) {
             preparedStatement.setString(1, task.getTitle());
             preparedStatement.setString(2, task.getDescription());
-            preparedStatement.setString(3, Objects.requireNonNullElse(task.getStatus(), "PENDING"));
+            preparedStatement.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
             preparedStatement.setTimestamp(4, Timestamp.valueOf(task.getDate()));
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
@@ -76,11 +78,14 @@ public class JDBCRepository {
         }
     }
 
-    public void setUpdate(TaskDTO task) {
+    public void setUpdate(TaskDTO task, int id) {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(UPDATE)) {
-            preparedStatement.setString(1, "COMPLETED");
-            preparedStatement.setInt(2, 1);
+            preparedStatement.setString(1, task.getTitle());
+            preparedStatement.setString(2, task.getDescription());
+            preparedStatement.setString(3, String.valueOf(task.getStatus()));
+            preparedStatement.setTimestamp(4, Timestamp.valueOf(task.getDate()));
+            preparedStatement.setInt(5, id);
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("crush", e);

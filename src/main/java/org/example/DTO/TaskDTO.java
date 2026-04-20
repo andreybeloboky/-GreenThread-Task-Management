@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
+import org.example.controller.TaskStatus;
 
 import java.time.LocalDateTime;
 
@@ -29,6 +30,5 @@ public class TaskDTO {
     private LocalDateTime date;
 
     @JsonProperty
-    @NotNull
-    private String status;
+    private TaskStatus status;
 }

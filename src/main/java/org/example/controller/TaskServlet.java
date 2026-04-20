@@ -1,6 +1,5 @@
 package org.example.controller;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -16,8 +15,8 @@ import org.example.DTO.TaskDTO;
 import org.example.service.TaskService;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Optional;
 
 @WebServlet("/tasks")
 public class TaskServlet extends HttpServlet {
@@ -65,40 +64,33 @@ public class TaskServlet extends HttpServlet {
     }
 
     @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        TaskDTO up = mapper.readValue(req.getInputStream(), TaskDTO.class);
-
-
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        Optional<TaskDTO> up = Optional.ofNullable(mapper.readValue(req.getInputStream(), TaskDTO.class));
         int id = Integer.parseInt(req.getParameter("id"));
-        boolean updateData = task.update(id, up);
-        if (updateData) {
-            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
-            resp.setContentType("application/json");
-            resp.setCharacterEncoding("UTF-8");
-
-            // ???
+        Optional<TaskDTO> updateData = task.update(id, up);
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        if (updateData.isPresent()) {
+            resp.setStatus(HttpServletResponse.SC_OK);
         } else {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
-
-            // зачем setContent ?? можно же без него
-            resp.setContentType("application/json");
             resp.getWriter().write("{\"error\": \"Invalid parameters\"}");
         }
     }
 
     @Override
-    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String idParam = req.getParameter("id");
-        if (idParam == null) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter");
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        int idParam = Integer.parseInt(req.getParameter("id"));
+        if (idParam < 0) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter" + idParam);
             return;
         }
-        int id = Integer.parseInt(idParam);
-        boolean deleted = task.delete(id);
+        boolean deleted = task.delete(idParam);
         if (deleted) {
-            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+            resp.setStatus(HttpServletResponse.SC_OK);
+            resp.getWriter().write("The data of id" + idParam + " is deleted successfully");
         } else {
-            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Task not found");
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Task is not found");
         }
     }
 }
