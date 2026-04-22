@@ -5,7 +5,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.example.DTO.TaskDTO;
 import org.example.controller.TaskStatus;
-import org.example.repository.JDBCRepository;
+import org.example.repository.TaskJDBCRepository;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -13,11 +13,11 @@ import java.util.Set;
 
 public class TaskService {
 
-    private final JDBCRepository repo;
+    private final TaskJDBCRepository repo;
     private final Validator validator;
 
     public TaskService(HikariDataSource ds, Validator validatorIn) {
-        this.repo = new JDBCRepository(ds);
+        this.repo = new TaskJDBCRepository(ds);
         this.validator = validatorIn;
     }
 
@@ -34,18 +34,18 @@ public class TaskService {
         return createTask;
     }
 
-    public Optional<TaskDTO> update(int id, Optional<TaskDTO> task) {
+    public Optional<TaskDTO> update(int id, TaskDTO task) {
         TaskDTO oldTask = repo.findById(id);
         if (oldTask == null) return Optional.empty();
 
         TaskStatus oldStatus = oldTask.getStatus();
-        TaskStatus newStatus = task.get().getStatus();
+        TaskStatus newStatus = task.getStatus();
 
         if (!oldStatus.canTransitionTo(newStatus)) {
             throw new IllegalStateException("Invalid status transition");
         }
-        this.repo.setUpdate(task.get(), id);
-        return task;
+        this.repo.setUpdate(task, id);
+        return Optional.of(task);
     }
 
     public boolean delete(int id) {

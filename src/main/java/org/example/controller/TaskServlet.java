@@ -39,7 +39,7 @@ public class TaskServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         ArrayList<TaskDTO> data = task.takeAllElements();
-        if (data.size() - 1 == 0) {
+        if (data.size() - 1 < 0) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Database is empty");
         }
         mapper.registerModule(new JavaTimeModule());
@@ -54,7 +54,7 @@ public class TaskServlet extends HttpServlet {
         TaskDTO createTask = mapper.readValue(req.getInputStream(), TaskDTO.class);
         TaskDTO create = task.createTask(createTask);
         if (create != null) {
-            resp.setStatus(HttpServletResponse.SC_OK);
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             resp.setContentType("application/json");
             resp.setCharacterEncoding("UTF-8");
             mapper.writeValue(resp.getWriter(), create);
@@ -67,11 +67,12 @@ public class TaskServlet extends HttpServlet {
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         Optional<TaskDTO> up = Optional.ofNullable(mapper.readValue(req.getInputStream(), TaskDTO.class));
         int id = Integer.parseInt(req.getParameter("id"));
-        Optional<TaskDTO> updateData = task.update(id, up);
+        Optional<TaskDTO> updateData = task.update(id, up.get());
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         if (updateData.isPresent()) {
             resp.setStatus(HttpServletResponse.SC_OK);
+            mapper.writeValue(resp.getWriter(), updateData);
         } else {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write("{\"error\": \"Invalid parameters\"}");
@@ -87,7 +88,7 @@ public class TaskServlet extends HttpServlet {
         }
         boolean deleted = task.delete(idParam);
         if (deleted) {
-            resp.setStatus(HttpServletResponse.SC_OK);
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             resp.getWriter().write("The data of id" + idParam + " is deleted successfully");
         } else {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Task is not found");

@@ -10,19 +10,18 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.Optional;
 
 @Slf4j
-public class JDBCRepository {
+public class TaskJDBCRepository {
 
     private final HikariDataSource dataSource;
     private static final String SELECT = "SELECT * FROM tasks t ORDER BY t.id";
-    private static final String SELECT_ID = "SELECT * FROM tasks t WHERE id = ?";
+    private static final String SELECT_ID = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
     private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?)";
-    private static final String UPDATE = "UPDATE tasks SET (title, description, status, duedate) VALUES (?,?,?,?) WHERE id = ? FOR UPDATE";
+    private static final String UPDATE = "UPDATE tasks SET title = ?, description= ?, status= ?, duedate= ? WHERE id = ?";
     private static final String DELETE = "DELETE FROM tasks WHERE id = ?";
 
-    public JDBCRepository(HikariDataSource dataSource) {
+    public TaskJDBCRepository(HikariDataSource dataSource) {
         this.dataSource = dataSource;
     }
 
@@ -79,16 +78,34 @@ public class JDBCRepository {
     }
 
     public void setUpdate(TaskDTO task, int id) {
-        try (Connection connection = openConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(UPDATE)) {
-            preparedStatement.setString(1, task.getTitle());
-            preparedStatement.setString(2, task.getDescription());
-            preparedStatement.setString(3, String.valueOf(task.getStatus()));
-            preparedStatement.setTimestamp(4, Timestamp.valueOf(task.getDate()));
-            preparedStatement.setInt(5, id);
-            preparedStatement.executeUpdate();
+        Connection connection = null;
+        try {
+            connection = openConnection();
+            connection.setAutoCommit(false);
+            try (PreparedStatement preparedId = connection.prepareStatement(SELECT_ID);
+                 PreparedStatement preparedStatement = connection.prepareStatement(UPDATE)) {
+                preparedStatement.setString(1, task.getTitle());
+                preparedStatement.setString(2, task.getDescription());
+                preparedStatement.setString(3, String.valueOf(task.getStatus()));
+                preparedStatement.setTimestamp(4, Timestamp.valueOf(task.getDate()));
+                preparedStatement.setInt(5, id);
+
+                connection.commit();
+                preparedStatement.executeUpdate();
+            } catch (SQLException e) {
+                connection.rollback();
+                throw new DataAccessException("crush", e);
+            } finally {
+                connection.setAutoCommit(true);
+            }
         } catch (SQLException e) {
             throw new DataAccessException("crush", e);
+        } finally {
+            try {
+                Objects.requireNonNull(connection).close();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
