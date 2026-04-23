@@ -2,11 +2,15 @@ package org.example.service;
 
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
 import org.example.DTO.TaskDTO;
 import org.example.controller.TaskStatus;
 import org.example.repository.TaskJDBCRepository;
 
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Set;
@@ -32,7 +36,18 @@ public class TaskService {
         }
 
         Set<ConstraintViolation<TaskDTO>> violations = validator.validate(createTask);
-        if (!violations.isEmpty()) return Optional.empty();
+        if (!violations.isEmpty()) {
+            JsonObjectBuilder errorBuilder = Json.createObjectBuilder();
+            for (ConstraintViolation<TaskDTO> violation : violations) {
+                errorBuilder.add(
+                        violation.getPropertyPath().toString(),
+                        violation.getMessage()
+                );
+            }
+            JsonObject errorJson = errorBuilder.build();
+
+            throw new ValidationException(errorJson.toString());
+        }
 
         repo.insert(createTask);
         return Optional.of(createTask);

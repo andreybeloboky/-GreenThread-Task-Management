@@ -59,7 +59,7 @@ public class TaskServlet extends HttpServlet {
             resp.setCharacterEncoding("UTF-8");
             mapper.writeValue(resp.getWriter(), create.get());
         } else {
-            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "This task is already created");
+            resp.sendError(HttpServletResponse.SC_CONFLICT, "This task is already created");
         }
     }
 
@@ -91,7 +91,7 @@ public class TaskServlet extends HttpServlet {
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             resp.getWriter().write("The data of id" + idParam + " is deleted successfully");
         } else {
-            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Task is not found");
+            resp.sendError(HttpServletResponse.SC_CONFLICT, "Task is not found");
         }
     }
 }
