@@ -48,7 +48,7 @@ public class TaskJDBCRepository {
             preparedStatement.setInt(1, id);
             ResultSet rs = preparedStatement.executeQuery();
             if (!rs.next()) {
-              return Optional.empty();
+                return Optional.empty();
             }
             return Optional.of(getElement(rs));
         } catch (SQLException e) {
@@ -99,32 +99,46 @@ public class TaskJDBCRepository {
         Connection connection = null;
         try {
             connection = openConnection();
+            log.info("Connection opened for update task id={}", id);
             connection.setAutoCommit(false);
-            try (PreparedStatement preparedStatement = connection.prepareStatement(UPDATE)) {
-                preparedStatement.setString(1, task.getTitle());
-                preparedStatement.setString(2, task.getDescription());
-                preparedStatement.setString(3, String.valueOf(task.getStatus()));
-                preparedStatement.setTimestamp(4, Timestamp.valueOf(task.getDate()));
-                preparedStatement.setInt(5, id);
+            log.debug("Transaction started (autoCommit=false)");
 
+            try (PreparedStatement ps = connection.prepareStatement(UPDATE)) {
+                ps.setString(1, task.getTitle());
+                ps.setString(2, task.getDescription());
+                ps.setString(3, task.getStatus().toString());
+                ps.setTimestamp(4, Timestamp.valueOf(task.getDate()));
+                ps.setInt(5, id);
+
+                int rows = ps.executeUpdate();
+                log.info("Update executed for id={}, affected rows={}", id, rows);
                 connection.commit();
-                preparedStatement.executeUpdate();
-            } catch (SQLException e) {
-                connection.rollback();
-                throw new DataAccessException("crush", e);
-            } finally {
-                connection.setAutoCommit(true);
+                log.debug("Transaction committed successfully");
             }
+
         } catch (SQLException e) {
-            throw new DataAccessException("crush", e);
+            if (connection != null) {
+                try {
+                    connection.rollback();
+                    log.warn("Transaction rolled back due to error: {}", e.getMessage());
+                } catch (SQLException ex) {
+                    log.error("Rollback failed: {}", ex.getMessage(), ex);
+                }
+            }
+            throw new DataAccessException("Update failed", e);
         } finally {
-            try {
-                Objects.requireNonNull(connection).close();
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
+            if (connection != null) {
+                try {
+                    connection.setAutoCommit(true);
+                    connection.close();
+                    log.debug("Connection closed for update task id={}", id);
+                } catch (SQLException ex) {
+                    log.error("Failed to close connection: {}", ex.getMessage(), ex);
+                }
             }
         }
     }
+
 
     public boolean delete(int id) {
         try (Connection connection = openConnection();
