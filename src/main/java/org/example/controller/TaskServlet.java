@@ -10,6 +10,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
 import org.example.DTO.TaskDTO;
 import org.example.service.TaskService;
@@ -52,14 +53,18 @@ public class TaskServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         TaskDTO createTask = mapper.readValue(req.getInputStream(), TaskDTO.class);
-        Optional<TaskDTO> create = task.createTask(createTask);
-        if (create.isPresent()) {
-            resp.setStatus(HttpServletResponse.SC_CREATED);
-            resp.setContentType("application/json");
-            resp.setCharacterEncoding("UTF-8");
-            mapper.writeValue(resp.getWriter(), create.get());
-        } else {
-            resp.sendError(HttpServletResponse.SC_CONFLICT, "This task is already created");
+        try {
+            Optional<TaskDTO> create = task.createTask(createTask);
+            if (create.isPresent()) {
+                resp.setStatus(HttpServletResponse.SC_CREATED);
+                resp.setContentType("application/json");
+                resp.setCharacterEncoding("UTF-8");
+                mapper.writeValue(resp.getWriter(), create.get());
+            } else {
+                resp.sendError(HttpServletResponse.SC_CONFLICT, "This task is already created");
+            }
+        } catch (ValidationException e) {
+            resp.sendError(HttpServletResponse.SC_CONFLICT, e.getMessage());
         }
     }
 
