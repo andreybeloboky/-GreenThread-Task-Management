@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
 import org.example.DTO.TaskDTO;
+import org.example.exception.DataExistsException;
 import org.example.service.TaskService;
 
 import java.io.IOException;
@@ -72,15 +73,19 @@ public class TaskServlet extends HttpServlet {
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         TaskDTO up = mapper.readValue(req.getInputStream(), TaskDTO.class);
         int id = Integer.parseInt(req.getParameter("id"));
-        Optional<TaskDTO> updateData = task.update(id, up);
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
-        if (updateData.isPresent()) {
-            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
-            mapper.writeValue(resp.getWriter(), updateData);
-        } else {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\": \"Invalid parameters\"}");
+        try {
+            Optional<TaskDTO> updateData = task.update(id, up);
+            resp.setContentType("application/json");
+            resp.setCharacterEncoding("UTF-8");
+            if (updateData.isPresent()) {
+                resp.setStatus(HttpServletResponse.SC_OK);
+                mapper.writeValue(resp.getWriter(), updateData.get());
+            } else {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
+                resp.getWriter().write("{\"error\": \"Invalid parameters\"}");
+            }
+        } catch (DataExistsException | IllegalStateException e) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
         }
     }
 

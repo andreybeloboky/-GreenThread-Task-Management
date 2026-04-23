@@ -15,6 +15,6 @@ public enum TaskStatus {
     }
 
     public boolean canTransitionTo(TaskStatus next) {
-        return allowed.contains(next);
+        return this == next || allowed.contains(next);
     }
 }

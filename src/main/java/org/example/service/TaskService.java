@@ -6,6 +6,7 @@ import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
 import org.example.DTO.TaskDTO;
 import org.example.controller.TaskStatus;
+import org.example.exception.DataExistsException;
 import org.example.repository.TaskJDBCRepository;
 
 import javax.json.Json;
@@ -55,7 +56,9 @@ public class TaskService {
 
     public Optional<TaskDTO> update(int id, TaskDTO task) {
         Optional<TaskDTO> oldTask = repo.findById(id);
-        if (oldTask.isEmpty()) return Optional.empty();
+        if (oldTask.isEmpty()) {
+         throw new DataExistsException("Id " + id + " doesn't exist");
+        }
 
         TaskStatus oldStatus = oldTask.get().getStatus();
         TaskStatus newStatus = task.getStatus();
