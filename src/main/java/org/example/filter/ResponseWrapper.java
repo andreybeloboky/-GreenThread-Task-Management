@@ -1,4 +1,4 @@
-package org.example.controller;
+package org.example.filter;
 
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.WriteListener;
