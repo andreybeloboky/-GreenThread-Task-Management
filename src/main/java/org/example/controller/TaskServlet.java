@@ -27,6 +27,8 @@ public class TaskServlet extends HttpServlet {
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         try {
             HikariDataSource ds = (HikariDataSource) getServletContext().getAttribute("datasource");
             Validator val = (Validator) getServletContext().getAttribute("validator");
@@ -42,8 +44,6 @@ public class TaskServlet extends HttpServlet {
         if (data.size() - 1 < 0) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Database is empty");
         }
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         mapper.writeValue(resp.getWriter(), data);
@@ -52,26 +52,26 @@ public class TaskServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         TaskDTO createTask = mapper.readValue(req.getInputStream(), TaskDTO.class);
-        TaskDTO create = task.createTask(createTask);
-        if (create != null) {
-            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        Optional<TaskDTO> create = task.createTask(createTask);
+        if (create.isPresent()) {
+            resp.setStatus(HttpServletResponse.SC_CREATED);
             resp.setContentType("application/json");
             resp.setCharacterEncoding("UTF-8");
-            mapper.writeValue(resp.getWriter(), create);
+            mapper.writeValue(resp.getWriter(), create.get());
         } else {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameters aren't correct");
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "This task is already created");
         }
     }
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        Optional<TaskDTO> up = Optional.ofNullable(mapper.readValue(req.getInputStream(), TaskDTO.class));
+        TaskDTO up = mapper.readValue(req.getInputStream(), TaskDTO.class);
         int id = Integer.parseInt(req.getParameter("id"));
-        Optional<TaskDTO> updateData = task.update(id, up.get());
+        Optional<TaskDTO> updateData = task.update(id, up);
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         if (updateData.isPresent()) {
-            resp.setStatus(HttpServletResponse.SC_OK);
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             mapper.writeValue(resp.getWriter(), updateData);
         } else {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST);

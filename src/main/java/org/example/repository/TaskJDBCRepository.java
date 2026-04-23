@@ -10,6 +10,7 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Optional;
 
 @Slf4j
 public class TaskJDBCRepository {
@@ -17,6 +18,7 @@ public class TaskJDBCRepository {
     private final HikariDataSource dataSource;
     private static final String SELECT = "SELECT * FROM tasks t ORDER BY t.id";
     private static final String SELECT_ID = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
+    private static final String SELECT_TITLE = "SELECT * FROM tasks t WHERE title = ?";
     private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?)";
     private static final String UPDATE = "UPDATE tasks SET title = ?, description= ?, status= ?, duedate= ? WHERE id = ?";
     private static final String DELETE = "DELETE FROM tasks WHERE id = ?";
@@ -40,13 +42,29 @@ public class TaskJDBCRepository {
         return list;
     }
 
-    public TaskDTO findById(int id) {
+    public Optional<TaskDTO> findById(int id) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID)) {
             preparedStatement.setInt(1, id);
             ResultSet rs = preparedStatement.executeQuery();
-            rs.next();
-            return getElement(rs);
+            if (!rs.next()) {
+              return Optional.empty();
+            }
+            return Optional.of(getElement(rs));
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Optional<TaskDTO> findByTitle(String title) {
+        try (Connection conn = openConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE)) {
+            preparedStatement.setString(1, title);
+            ResultSet rs = preparedStatement.executeQuery();
+            if (!rs.next()) {
+                return Optional.empty();
+            }
+            return Optional.of(getElement(rs));
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -82,8 +100,7 @@ public class TaskJDBCRepository {
         try {
             connection = openConnection();
             connection.setAutoCommit(false);
-            try (PreparedStatement preparedId = connection.prepareStatement(SELECT_ID);
-                 PreparedStatement preparedStatement = connection.prepareStatement(UPDATE)) {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(UPDATE)) {
                 preparedStatement.setString(1, task.getTitle());
                 preparedStatement.setString(2, task.getDescription());
                 preparedStatement.setString(3, String.valueOf(task.getStatus()));

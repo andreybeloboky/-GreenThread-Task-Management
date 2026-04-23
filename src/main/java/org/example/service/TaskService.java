@@ -25,20 +25,24 @@ public class TaskService {
         return repo.getList();
     }
 
-    public TaskDTO createTask(TaskDTO createTask) {
-        Set<ConstraintViolation<TaskDTO>> violations = validator.validate(createTask);
-        if (!violations.isEmpty()) {
-            return null;
+    public Optional<TaskDTO> createTask(TaskDTO createTask) {
+        Optional<TaskDTO> theSameTitleName = repo.findByTitle(createTask.getTitle());
+        if (theSameTitleName.isPresent()) {
+            return Optional.empty();
         }
+
+        Set<ConstraintViolation<TaskDTO>> violations = validator.validate(createTask);
+        if (!violations.isEmpty()) return Optional.empty();
+
         repo.insert(createTask);
-        return createTask;
+        return Optional.of(createTask);
     }
 
     public Optional<TaskDTO> update(int id, TaskDTO task) {
-        TaskDTO oldTask = repo.findById(id);
-        if (oldTask == null) return Optional.empty();
+        Optional<TaskDTO> oldTask = repo.findById(id);
+        if (oldTask.isEmpty()) return Optional.empty();
 
-        TaskStatus oldStatus = oldTask.getStatus();
+        TaskStatus oldStatus = oldTask.get().getStatus();
         TaskStatus newStatus = task.getStatus();
 
         if (!oldStatus.canTransitionTo(newStatus)) {

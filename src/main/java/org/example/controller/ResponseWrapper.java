@@ -42,7 +42,7 @@ public class ResponseWrapper extends HttpServletResponseWrapper {
     @Override
     public PrintWriter getWriter() {
         if (writer == null) {
-            writer = new PrintWriter(new OutputStreamWriter(buffer, StandardCharsets.UTF_8));
+            writer = new PrintWriter(new OutputStreamWriter(buffer, StandardCharsets.UTF_8),true);
         }
         return writer;
     }
