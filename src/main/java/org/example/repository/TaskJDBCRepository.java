@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.TaskInputDTO;
 import org.example.controller.TaskStatus;
+import org.example.dto.TaskOutputDTO;
 import org.example.exception.DataAccessException;
 
 import java.sql.*;
@@ -40,7 +41,7 @@ public class TaskJDBCRepository {
         return list;
     }
 
-    public Optional<TaskInputDTO> findById(int id) {
+    public Optional<TaskOutputDTO> findById(int id) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID)) {
             preparedStatement.setInt(1, id);

@@ -3,6 +3,7 @@ package org.example.service;
 import com.zaxxer.hikari.HikariDataSource;
 import org.example.dto.TaskInputDTO;
 import org.example.controller.TaskStatus;
+import org.example.dto.TaskOutputDTO;
 import org.example.exception.DataExistsException;
 import org.example.repository.TaskJDBCRepository;
 
@@ -34,7 +35,7 @@ public class TaskService {
     }
 
     public Optional<TaskInputDTO> update(int id, TaskInputDTO task) {
-        Optional<TaskInputDTO> oldTask = repo.findById(id);
+        Optional<TaskOutputDTO> oldTask = repo.findById(id);
         if (oldTask.isEmpty()) {
             throw new DataExistsException("Id " + id + " doesn't exist");
         }

@@ -68,18 +68,18 @@ public class TaskServlet extends HttpServlet {
             resp.setCharacterEncoding(ENCODING_UTF8);
             mapper.writeValue(resp.getWriter(), create);
 
-        } catch (ValidationException | IllegalStateException e) {
+        } catch (ValidationException | DataExistsException e) {
             resp.sendError(HttpServletResponse.SC_CONFLICT, e.getMessage());
         }
     }
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        TaskInputDTO up = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
+        TaskInputDTO updateDate = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
         int id = Integer.parseInt(req.getParameter("id"));
         try {
-            validate(up);
-            Optional<TaskInputDTO> updateData = task.update(id, up);
+            validate(updateDate);
+            Optional<TaskInputDTO> updateData = task.update(id, updateDate);
             resp.setContentType(CONTENT_TYPE_JSON);
             resp.setCharacterEncoding(ENCODING_UTF8);
             if (updateData.isPresent()) {
@@ -89,7 +89,7 @@ public class TaskServlet extends HttpServlet {
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
                 resp.getWriter().write("{error: Invalid parameters}");
             }
-        } catch (DataExistsException | IllegalStateException e) {
+        } catch (ValidationException | DataExistsException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
         }
     }
