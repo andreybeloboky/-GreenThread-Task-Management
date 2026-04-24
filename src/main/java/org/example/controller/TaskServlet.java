@@ -10,21 +10,29 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
-import org.example.DTO.TaskDTO;
+import org.example.dto.TaskInputDTO;
 import org.example.exception.DataExistsException;
 import org.example.service.TaskService;
 
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.Set;
 
 @WebServlet("/tasks")
 public class TaskServlet extends HttpServlet {
 
     private TaskService task;
     private final ObjectMapper mapper = new ObjectMapper();
+    private Validator val;
+    public static final String CONTENT_TYPE_JSON = "application/json";
+    public static final String ENCODING_UTF8 = "UTF-8";
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -33,8 +41,8 @@ public class TaskServlet extends HttpServlet {
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         try {
             HikariDataSource ds = (HikariDataSource) getServletContext().getAttribute("datasource");
-            Validator val = (Validator) getServletContext().getAttribute("validator");
-            task = new TaskService(ds, val);
+            val = (Validator) getServletContext().getAttribute("validator");
+            task = new TaskService(ds);
         } catch (Exception e) {
             throw new ServletException("Failed to initialize the library", e);
         }
@@ -42,47 +50,44 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        ArrayList<TaskDTO> data = task.takeAllElements();
-        if (data.size() - 1 < 0) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Database is empty");
-        }
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
+        ArrayList<TaskInputDTO> data = task.takeAllElements();
+        resp.setContentType(CONTENT_TYPE_JSON);
+        resp.setCharacterEncoding(ENCODING_UTF8);
         mapper.writeValue(resp.getWriter(), data);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        TaskDTO createTask = mapper.readValue(req.getInputStream(), TaskDTO.class);
+        TaskInputDTO createTask = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
         try {
-            Optional<TaskDTO> create = task.createTask(createTask);
-            if (create.isPresent()) {
-                resp.setStatus(HttpServletResponse.SC_CREATED);
-                resp.setContentType("application/json");
-                resp.setCharacterEncoding("UTF-8");
-                mapper.writeValue(resp.getWriter(), create.get());
-            } else {
-                resp.sendError(HttpServletResponse.SC_CONFLICT, "This task is already created");
-            }
-        } catch (ValidationException e) {
+            validate(createTask);
+            TaskInputDTO create = task.createTask(createTask);
+
+            resp.setStatus(HttpServletResponse.SC_CREATED);
+            resp.setContentType(CONTENT_TYPE_JSON);
+            resp.setCharacterEncoding(ENCODING_UTF8);
+            mapper.writeValue(resp.getWriter(), create);
+
+        } catch (ValidationException | IllegalStateException e) {
             resp.sendError(HttpServletResponse.SC_CONFLICT, e.getMessage());
         }
     }
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        TaskDTO up = mapper.readValue(req.getInputStream(), TaskDTO.class);
+        TaskInputDTO up = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
         int id = Integer.parseInt(req.getParameter("id"));
         try {
-            Optional<TaskDTO> updateData = task.update(id, up);
-            resp.setContentType("application/json");
-            resp.setCharacterEncoding("UTF-8");
+            validate(up);
+            Optional<TaskInputDTO> updateData = task.update(id, up);
+            resp.setContentType(CONTENT_TYPE_JSON);
+            resp.setCharacterEncoding(ENCODING_UTF8);
             if (updateData.isPresent()) {
                 resp.setStatus(HttpServletResponse.SC_OK);
                 mapper.writeValue(resp.getWriter(), updateData.get());
             } else {
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{\"error\": \"Invalid parameters\"}");
+                resp.getWriter().write("{error: Invalid parameters}");
             }
         } catch (DataExistsException | IllegalStateException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
@@ -102,6 +107,22 @@ public class TaskServlet extends HttpServlet {
             resp.getWriter().write("The data of id" + idParam + " is deleted successfully");
         } else {
             resp.sendError(HttpServletResponse.SC_CONFLICT, "Task is not found");
+        }
+    }
+
+    private void validate(TaskInputDTO up) {
+        Set<ConstraintViolation<TaskInputDTO>> violations = val.validate(up);
+        if (!violations.isEmpty()) {
+            JsonObjectBuilder errorBuilder = Json.createObjectBuilder();
+            for (ConstraintViolation<TaskInputDTO> violation : violations) {
+                errorBuilder.add(
+                        violation.getPropertyPath().toString(),
+                        violation.getMessage()
+                );
+            }
+            JsonObject errorJson = errorBuilder.build();
+
+            throw new ValidationException(errorJson.toString());
         }
     }
 }

@@ -2,15 +2,13 @@ package org.example.repository;
 
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
-import org.example.DTO.TaskDTO;
+import org.example.dto.TaskInputDTO;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataAccessException;
 
 import java.sql.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 public class TaskJDBCRepository {
@@ -27,13 +25,13 @@ public class TaskJDBCRepository {
         this.dataSource = dataSource;
     }
 
-    public ArrayList<TaskDTO> getList() {
-        ArrayList<TaskDTO> list = new ArrayList<>();
+    public ArrayList<TaskInputDTO> getList() {
+        ArrayList<TaskInputDTO> list = new ArrayList<>();
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT);
              ResultSet rs = preparedStatement.executeQuery()) {
             while (rs.next()) {
-                TaskDTO obj = getElement(rs);
+                TaskInputDTO obj = getElement(rs);
                 list.add(obj);
             }
         } catch (SQLException e) {
@@ -42,7 +40,7 @@ public class TaskJDBCRepository {
         return list;
     }
 
-    public Optional<TaskDTO> findById(int id) {
+    public Optional<TaskInputDTO> findById(int id) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID)) {
             preparedStatement.setInt(1, id);
@@ -56,7 +54,7 @@ public class TaskJDBCRepository {
         }
     }
 
-    public Optional<TaskDTO> findByTitle(String title) {
+    public Optional<TaskInputDTO> findByTitle(String title) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE)) {
             preparedStatement.setString(1, title);
@@ -70,8 +68,8 @@ public class TaskJDBCRepository {
         }
     }
 
-    private TaskDTO getElement(ResultSet rs) throws SQLException {
-        TaskDTO obj = new TaskDTO();
+    private TaskInputDTO getElement(ResultSet rs) throws SQLException {
+        TaskInputDTO obj = new TaskInputDTO();
         obj.setTitle(rs.getString(2));
         obj.setDescription(rs.getString(3));
         obj.setStatus(TaskStatus.valueOf(rs.getString(4)));
@@ -82,20 +80,22 @@ public class TaskJDBCRepository {
     }
 
 
-    public void insert(TaskDTO task) {
+    public void insert(TaskInputDTO task) {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT)) {
             preparedStatement.setString(1, task.getTitle());
             preparedStatement.setString(2, task.getDescription());
             preparedStatement.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
-            preparedStatement.setTimestamp(4, Timestamp.valueOf(task.getDate()));
+            preparedStatement.setTimestamp(4,
+                    Timestamp.valueOf(task.getDate()),
+                    Calendar.getInstance(TimeZone.getTimeZone("UTC")));
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("Incorrect data", e);
         }
     }
 
-    public void setUpdate(TaskDTO task, int id) {
+    public void setUpdate(TaskInputDTO task, int id) {
         Connection connection = null;
         try {
             connection = openConnection();

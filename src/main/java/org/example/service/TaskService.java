@@ -1,63 +1,42 @@
 package org.example.service;
 
 import com.zaxxer.hikari.HikariDataSource;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ValidationException;
-import jakarta.validation.Validator;
-import org.example.DTO.TaskDTO;
+import org.example.dto.TaskInputDTO;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataExistsException;
 import org.example.repository.TaskJDBCRepository;
 
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
 import java.util.ArrayList;
 import java.util.Optional;
-import java.util.Set;
+
 
 public class TaskService {
 
     private final TaskJDBCRepository repo;
-    private final Validator validator;
 
-    public TaskService(HikariDataSource ds, Validator validatorIn) {
+    public TaskService(HikariDataSource ds) {
         this.repo = new TaskJDBCRepository(ds);
-        this.validator = validatorIn;
     }
 
-    public ArrayList<TaskDTO> takeAllElements() {
+    public ArrayList<TaskInputDTO> takeAllElements() {
         return repo.getList();
     }
 
-    public Optional<TaskDTO> createTask(TaskDTO createTask) {
-        Optional<TaskDTO> theSameTitleName = repo.findByTitle(createTask.getTitle());
+    public TaskInputDTO createTask(TaskInputDTO createTask) {
+        Optional<TaskInputDTO> theSameTitleName = repo.findByTitle(createTask.getTitle());
+
         if (theSameTitleName.isPresent()) {
-            return Optional.empty();
-        }
-
-        Set<ConstraintViolation<TaskDTO>> violations = validator.validate(createTask);
-        if (!violations.isEmpty()) {
-            JsonObjectBuilder errorBuilder = Json.createObjectBuilder();
-            for (ConstraintViolation<TaskDTO> violation : violations) {
-                errorBuilder.add(
-                        violation.getPropertyPath().toString(),
-                        violation.getMessage()
-                );
-            }
-            JsonObject errorJson = errorBuilder.build();
-
-            throw new ValidationException(errorJson.toString());
+            throw new DataExistsException("This task is already created");
         }
 
         repo.insert(createTask);
-        return Optional.of(createTask);
+        return createTask;
     }
 
-    public Optional<TaskDTO> update(int id, TaskDTO task) {
-        Optional<TaskDTO> oldTask = repo.findById(id);
+    public Optional<TaskInputDTO> update(int id, TaskInputDTO task) {
+        Optional<TaskInputDTO> oldTask = repo.findById(id);
         if (oldTask.isEmpty()) {
-         throw new DataExistsException("Id " + id + " doesn't exist");
+            throw new DataExistsException("Id " + id + " doesn't exist");
         }
 
         TaskStatus oldStatus = oldTask.get().getStatus();
@@ -66,11 +45,16 @@ public class TaskService {
         if (!oldStatus.canTransitionTo(newStatus)) {
             throw new IllegalStateException("Invalid status transition");
         }
-        this.repo.setUpdate(task, id);
+
+        if (oldStatus == TaskStatus.COMPLETED) {
+            throw new IllegalStateException("This task is already completed");
+        }
+
+        repo.setUpdate(task, id);
         return Optional.of(task);
     }
 
     public boolean delete(int id) {
-        return this.repo.delete(id);
+        return repo.delete(id);
     }
 }

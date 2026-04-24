@@ -1,4 +1,4 @@
-package org.example.DTO;
+package org.example.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Future;
@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-public class TaskDTO {
+public class TaskOutputDTO {
 
     @JsonProperty
     @NotBlank(message = "Title cannot be empty")
