@@ -32,7 +32,7 @@ public class TaskJDBCRepository {
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT);
              ResultSet rs = preparedStatement.executeQuery()) {
             while (rs.next()) {
-                TaskInputDTO obj = getElement(rs);
+                TaskOutputDTO obj = getElement(rs);
                 list.add(obj);
             }
         } catch (SQLException e) {

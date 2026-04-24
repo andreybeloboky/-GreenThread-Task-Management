@@ -1,5 +1,6 @@
 package org.example.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -23,7 +24,8 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 @WebServlet("/tasks")
@@ -70,7 +72,7 @@ public class TaskServlet extends HttpServlet {
             mapper.writeValue(resp.getWriter(), create);
 
         } catch (ValidationException | DataExistsException e) {
-            resp.sendError(HttpServletResponse.SC_CONFLICT, e.getMessage());
+            resp.getWriter().write(e.getMessage());
         }
     }
 
@@ -87,7 +89,7 @@ public class TaskServlet extends HttpServlet {
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), updateData);
         } catch (ValidationException | DataExistsException e) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+            resp.getWriter().write(e.getMessage());
         }
     }
 
@@ -100,26 +102,21 @@ public class TaskServlet extends HttpServlet {
         }
         boolean deleted = task.delete(idParam);
         if (deleted) {
-            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+            resp.setStatus(HttpServletResponse.SC_OK);
             resp.getWriter().write("The data of id" + idParam + " is deleted successfully");
         } else {
             resp.sendError(HttpServletResponse.SC_CONFLICT, "Task is not found");
         }
     }
 
-    private void validate(TaskInputDTO up) {
+    private void validate(TaskInputDTO up) throws JsonProcessingException {
         Set<ConstraintViolation<TaskInputDTO>> violations = val.validate(up);
         if (!violations.isEmpty()) {
-            JsonObjectBuilder errorBuilder = Json.createObjectBuilder();
+            Map<String, String> errors = new HashMap<>();
             for (ConstraintViolation<TaskInputDTO> violation : violations) {
-                errorBuilder.add(
-                        violation.getPropertyPath().toString(),
-                        violation.getMessage()
-                );
+                errors.put(violation.getPropertyPath().toString(), violation.getMessage());
             }
-            JsonObject errorJson = errorBuilder.build();
-
-            throw new ValidationException(errorJson.toString());
+            throw new ValidationException(mapper.writeValueAsString(errors));
         }
     }
 }
