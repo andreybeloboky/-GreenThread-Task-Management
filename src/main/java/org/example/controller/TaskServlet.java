@@ -14,6 +14,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
 import org.example.dto.TaskInputDTO;
+import org.example.dto.TaskOutputDTO;
 import org.example.exception.DataExistsException;
 import org.example.service.TaskService;
 
@@ -50,7 +51,7 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        ArrayList<TaskInputDTO> data = task.takeAllElements();
+        ArrayList<TaskOutputDTO> data = task.takeAllElements();
         resp.setContentType(CONTENT_TYPE_JSON);
         resp.setCharacterEncoding(ENCODING_UTF8);
         mapper.writeValue(resp.getWriter(), data);
@@ -79,16 +80,12 @@ public class TaskServlet extends HttpServlet {
         int id = Integer.parseInt(req.getParameter("id"));
         try {
             validate(updateDate);
-            Optional<TaskInputDTO> updateData = task.update(id, updateDate);
+
+            TaskInputDTO updateData = task.update(id, updateDate);
             resp.setContentType(CONTENT_TYPE_JSON);
             resp.setCharacterEncoding(ENCODING_UTF8);
-            if (updateData.isPresent()) {
-                resp.setStatus(HttpServletResponse.SC_OK);
-                mapper.writeValue(resp.getWriter(), updateData.get());
-            } else {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{error: Invalid parameters}");
-            }
+            resp.setStatus(HttpServletResponse.SC_OK);
+            mapper.writeValue(resp.getWriter(), updateData);
         } catch (ValidationException | DataExistsException e) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
         }

@@ -26,8 +26,8 @@ public class TaskJDBCRepository {
         this.dataSource = dataSource;
     }
 
-    public ArrayList<TaskInputDTO> getList() {
-        ArrayList<TaskInputDTO> list = new ArrayList<>();
+    public ArrayList<TaskOutputDTO> getList() {
+        ArrayList<TaskOutputDTO> list = new ArrayList<>();
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT);
              ResultSet rs = preparedStatement.executeQuery()) {
@@ -55,7 +55,7 @@ public class TaskJDBCRepository {
         }
     }
 
-    public Optional<TaskInputDTO> findByTitle(String title) {
+    public Optional<TaskOutputDTO> findByTitle(String title) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE)) {
             preparedStatement.setString(1, title);
@@ -69,8 +69,8 @@ public class TaskJDBCRepository {
         }
     }
 
-    private TaskInputDTO getElement(ResultSet rs) throws SQLException {
-        TaskInputDTO obj = new TaskInputDTO();
+    private TaskOutputDTO getElement(ResultSet rs) throws SQLException {
+        TaskOutputDTO obj = new TaskOutputDTO();
         obj.setTitle(rs.getString(2));
         obj.setDescription(rs.getString(3));
         obj.setStatus(TaskStatus.valueOf(rs.getString(4)));

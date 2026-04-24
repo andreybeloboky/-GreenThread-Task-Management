@@ -19,12 +19,12 @@ public class TaskService {
         this.repo = new TaskJDBCRepository(ds);
     }
 
-    public ArrayList<TaskInputDTO> takeAllElements() {
+    public ArrayList<TaskOutputDTO> takeAllElements() {
         return repo.getList();
     }
 
     public TaskInputDTO createTask(TaskInputDTO createTask) {
-        Optional<TaskInputDTO> theSameTitleName = repo.findByTitle(createTask.getTitle());
+        Optional<TaskOutputDTO> theSameTitleName = repo.findByTitle(createTask.getTitle());
 
         if (theSameTitleName.isPresent()) {
             throw new DataExistsException("This task is already created");
@@ -34,7 +34,7 @@ public class TaskService {
         return createTask;
     }
 
-    public Optional<TaskInputDTO> update(int id, TaskInputDTO task) {
+    public TaskInputDTO update(int id, TaskInputDTO task) {
         Optional<TaskOutputDTO> oldTask = repo.findById(id);
         if (oldTask.isEmpty()) {
             throw new DataExistsException("Id " + id + " doesn't exist");
@@ -52,7 +52,7 @@ public class TaskService {
         }
 
         repo.setUpdate(task, id);
-        return Optional.of(task);
+        return task;
     }
 
     public boolean delete(int id) {
