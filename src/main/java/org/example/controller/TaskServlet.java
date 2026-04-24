@@ -19,9 +19,6 @@ import org.example.dto.TaskOutputDTO;
 import org.example.exception.DataExistsException;
 import org.example.service.TaskService;
 
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -80,15 +77,15 @@ public class TaskServlet extends HttpServlet {
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         TaskInputDTO updateDate = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
         int id = Integer.parseInt(req.getParameter("id"));
+        resp.setContentType(CONTENT_TYPE_JSON);
+        resp.setCharacterEncoding(ENCODING_UTF8);
         try {
             validate(updateDate);
-
             TaskInputDTO updateData = task.update(id, updateDate);
-            resp.setContentType(CONTENT_TYPE_JSON);
-            resp.setCharacterEncoding(ENCODING_UTF8);
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), updateData);
         } catch (ValidationException | DataExistsException e) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write(e.getMessage());
         }
     }
@@ -102,8 +99,7 @@ public class TaskServlet extends HttpServlet {
         }
         boolean deleted = task.delete(idParam);
         if (deleted) {
-            resp.setStatus(HttpServletResponse.SC_OK);
-            resp.getWriter().write("The data of id" + idParam + " is deleted successfully");
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } else {
             resp.sendError(HttpServletResponse.SC_CONFLICT, "Task is not found");
         }

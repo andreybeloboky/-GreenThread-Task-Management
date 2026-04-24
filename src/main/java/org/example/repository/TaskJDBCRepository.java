@@ -31,9 +31,11 @@ public class TaskJDBCRepository {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT);
              ResultSet rs = preparedStatement.executeQuery()) {
+            log.info("Connection opened for take all elements task");
             while (rs.next()) {
                 TaskOutputDTO obj = getElement(rs);
                 list.add(obj);
+                log.info("Added an element to list");
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -45,11 +47,13 @@ public class TaskJDBCRepository {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID)) {
             preparedStatement.setInt(1, id);
-            ResultSet rs = preparedStatement.executeQuery();
-            if (!rs.next()) {
-                return Optional.empty();
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                log.info("Connection opened for find by id element task");
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(getElement(rs));
             }
-            return Optional.of(getElement(rs));
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -59,11 +63,13 @@ public class TaskJDBCRepository {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE)) {
             preparedStatement.setString(1, title);
-            ResultSet rs = preparedStatement.executeQuery();
-            if (!rs.next()) {
-                return Optional.empty();
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                log.info("Connection opened for find by title element task");
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(getElement(rs));
             }
-            return Optional.of(getElement(rs));
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -84,6 +90,7 @@ public class TaskJDBCRepository {
     public void insert(TaskInputDTO task) {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT)) {
+            log.info("Connection opened for insert task");
             preparedStatement.setString(1, task.getTitle());
             preparedStatement.setString(2, task.getDescription());
             preparedStatement.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
@@ -145,10 +152,12 @@ public class TaskJDBCRepository {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(DELETE)) {
             preparedStatement.setInt(1, id);
+            log.info("Connection opened for delete task id={}", id);
             int rows = preparedStatement.executeUpdate();
+            log.info("Delete executed for id={}", id);
             return rows != 0;
         } catch (SQLException e) {
-            throw new DataAccessException("crush", e);
+            throw new DataAccessException("Element doesn't exist", e);
         }
     }
 
