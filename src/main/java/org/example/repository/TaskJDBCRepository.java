@@ -115,7 +115,7 @@ public class TaskJDBCRepository {
                 ps.setString(1, task.getTitle());
                 ps.setString(2, task.getDescription());
                 ps.setString(3, task.getStatus().toString());
-                ps.setTimestamp(4, Timestamp.valueOf(task.getDate()));
+                ps.setTimestamp(4, Timestamp.valueOf(task.getDate()), Calendar.getInstance(TimeZone.getTimeZone("UTC")));
                 ps.setInt(5, id);
 
                 int rows = ps.executeUpdate();
