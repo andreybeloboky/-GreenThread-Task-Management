@@ -23,8 +23,9 @@ public class MetadataAuditFilter implements Filter {
         byte[] payload = wrapper.getCapturedBytes();
         int size = payload.length;
 
+        log.info("Response payload size: {}", size);
+
         ServletOutputStream out = httpResp.getOutputStream();
-        out.write(("Response payload size: " + size + " bytes\n").getBytes());
         out.write(payload);
         out.flush();
     }
