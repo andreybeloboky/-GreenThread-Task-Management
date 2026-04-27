@@ -60,7 +60,7 @@ public class TaskServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         TaskInputDTO createTask = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
         try {
-            validate(createTask);
+            validateData(createTask);
             TaskInputDTO create = task.createTask(createTask);
 
             resp.setStatus(HttpServletResponse.SC_CREATED);
@@ -80,7 +80,7 @@ public class TaskServlet extends HttpServlet {
         resp.setContentType(CONTENT_TYPE_JSON);
         resp.setCharacterEncoding(ENCODING_UTF8);
         try {
-            validate(updateDate);
+            validateData(updateDate);
             TaskInputDTO updateData = task.update(id, updateDate);
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), updateData);
@@ -105,8 +105,8 @@ public class TaskServlet extends HttpServlet {
         }
     }
 
-    private void validate(TaskInputDTO up) throws JsonProcessingException {
-        Set<ConstraintViolation<TaskInputDTO>> violations = val.validate(up);
+    private void validateData(TaskInputDTO task) throws JsonProcessingException {
+        Set<ConstraintViolation<TaskInputDTO>> violations = val.validate(task);
         if (!violations.isEmpty()) {
             Map<String, String> errors = new HashMap<>();
             for (ConstraintViolation<TaskInputDTO> violation : violations) {

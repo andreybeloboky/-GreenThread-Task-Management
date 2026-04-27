@@ -5,6 +5,7 @@ import org.example.dto.TaskInputDTO;
 import org.example.controller.TaskStatus;
 import org.example.dto.TaskOutputDTO;
 import org.example.exception.DataExistsException;
+import org.example.exception.InvalidStatusTransitionException;
 import org.example.repository.TaskJDBCRepository;
 
 import java.util.ArrayList;
@@ -44,11 +45,11 @@ public class TaskService {
         TaskStatus newStatus = task.getStatus();
 
         if (!oldStatus.canTransitionTo(newStatus)) {
-            throw new IllegalStateException("Invalid status transition");
+            throw new InvalidStatusTransitionException("Invalid status transition");
         }
 
         if (oldStatus == TaskStatus.COMPLETED) {
-            throw new IllegalStateException("This task is already completed");
+            throw new InvalidStatusTransitionException("This task is already completed");
         }
 
         repo.setUpdate(task, id);
