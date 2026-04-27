@@ -41,7 +41,6 @@ public class AppInitializer implements ServletContextListener {
     public void contextDestroyed(ServletContextEvent sce) {
         if (dataSource != null) {
             dataSource.close();
-            System.out.println("HikariCP closed");
         }
         if (factory != null) {
             factory.close();

@@ -32,6 +32,7 @@ public class TaskServlet extends HttpServlet {
     private TaskService task;
     private final ObjectMapper mapper = new ObjectMapper();
     private Validator val;
+    private HikariDataSource ds;
     public static final String CONTENT_TYPE_JSON = "application/json";
     public static final String ENCODING_UTF8 = "UTF-8";
 
@@ -41,8 +42,14 @@ public class TaskServlet extends HttpServlet {
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         try {
-            HikariDataSource ds = (HikariDataSource) getServletContext().getAttribute("datasource");
-            val = (Validator) getServletContext().getAttribute("validator");
+            Object dsObj = getServletContext().getAttribute("datasource");
+            Object valObj = getServletContext().getAttribute("validator");
+            if (!(dsObj instanceof HikariDataSource) || !(valObj instanceof Validator)) {
+                throw new ServletException("Required context attributes 'datasource' or 'validator' are missing or invalid");
+            }
+
+            ds = (HikariDataSource) dsObj;
+            val = (Validator) valObj;
             task = new TaskService(ds);
         } catch (Exception e) {
             throw new ServletException("Failed to initialize the library", e);
