@@ -17,6 +17,7 @@ import jakarta.validation.Validator;
 import org.example.dto.TaskInputDTO;
 import org.example.dto.TaskOutputDTO;
 import org.example.exception.DataExistsException;
+import org.example.exception.InvalidStatusTransitionException;
 import org.example.service.TaskService;
 
 import java.io.IOException;
@@ -69,6 +70,7 @@ public class TaskServlet extends HttpServlet {
             mapper.writeValue(resp.getWriter(), create);
 
         } catch (ValidationException | DataExistsException e) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write(e.getMessage());
         }
     }
@@ -84,7 +86,7 @@ public class TaskServlet extends HttpServlet {
             TaskInputDTO updateData = task.update(id, updateDate);
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), updateData);
-        } catch (ValidationException | DataExistsException e) {
+        } catch (ValidationException | DataExistsException | InvalidStatusTransitionException e) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write(e.getMessage());
         }
