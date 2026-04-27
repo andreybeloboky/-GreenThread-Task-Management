@@ -69,7 +69,10 @@ public class TaskServlet extends HttpServlet {
             resp.setCharacterEncoding(ENCODING_UTF8);
             mapper.writeValue(resp.getWriter(), create);
 
-        } catch (ValidationException | DataExistsException e) {
+        } catch (DataExistsException e) {
+            resp.setStatus(HttpServletResponse.SC_CONFLICT);
+            resp.getWriter().write(e.getMessage());
+        } catch (ValidationException e) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write(e.getMessage());
         }
@@ -86,7 +89,10 @@ public class TaskServlet extends HttpServlet {
             TaskInputDTO updateData = task.update(id, updateDate);
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), updateData);
-        } catch (ValidationException | DataExistsException | InvalidStatusTransitionException e) {
+        } catch (DataExistsException | InvalidStatusTransitionException e) {
+            resp.setStatus(HttpServletResponse.SC_CONFLICT);
+            resp.getWriter().write(e.getMessage());
+        }catch (ValidationException e) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write(e.getMessage());
         }
@@ -104,6 +110,7 @@ public class TaskServlet extends HttpServlet {
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } else {
             resp.sendError(HttpServletResponse.SC_CONFLICT, "Task is not found");
+            return;
         }
     }
 
