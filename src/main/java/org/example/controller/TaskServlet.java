@@ -54,6 +54,12 @@ public class TaskServlet extends HttpServlet {
         ArrayList<TaskOutputDTO> data = task.takeAllElements();
         resp.setContentType(CONTENT_TYPE_JSON);
         resp.setCharacterEncoding(ENCODING_UTF8);
+        if (data == null || data.isEmpty()) {
+            resp.setStatus(HttpServletResponse.SC_OK);
+            mapper.writeValue(resp.getWriter(), new ArrayList<>());
+            return;
+        }
+        resp.setStatus(HttpServletResponse.SC_OK);
         mapper.writeValue(resp.getWriter(), data);
     }
 
