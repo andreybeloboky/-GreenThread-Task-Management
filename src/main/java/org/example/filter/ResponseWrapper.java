@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletResponseWrapper;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
@@ -21,7 +22,7 @@ public class ResponseWrapper extends HttpServletResponseWrapper {
     }
 
     @Override
-    public ServletOutputStream getOutputStream() {
+    public synchronized ServletOutputStream getOutputStream() {
         if (outputStream == null) {
             outputStream = new ServletOutputStream() {
                 @Override
@@ -40,7 +41,7 @@ public class ResponseWrapper extends HttpServletResponseWrapper {
     }
 
     @Override
-    public PrintWriter getWriter() {
+    public synchronized PrintWriter getWriter() {
         if (writer == null) {
             writer = new PrintWriter(new OutputStreamWriter(buffer, StandardCharsets.UTF_8),true);
         }
@@ -52,5 +53,18 @@ public class ResponseWrapper extends HttpServletResponseWrapper {
             writer.flush();
         }
         return buffer.toByteArray();
+    }
+
+    public void close() {
+        try {
+            if (writer != null) {
+                writer.close();
+            }
+            if (outputStream != null) {
+                outputStream.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -28,5 +28,6 @@ public class MetadataAuditFilter implements Filter {
         ServletOutputStream out = httpResp.getOutputStream();
         out.write(payload);
         out.flush();
+        wrapper.close();
     }
 }

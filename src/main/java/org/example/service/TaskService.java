@@ -44,12 +44,12 @@ public class TaskService {
         TaskStatus oldStatus = oldTask.get().getStatus();
         TaskStatus newStatus = task.getStatus();
 
-        if (!oldStatus.canTransitionTo(newStatus)) {
-            throw new InvalidStatusTransitionException("Invalid status transition");
-        }
-
         if (oldStatus == TaskStatus.COMPLETED) {
             throw new InvalidStatusTransitionException("This task is already completed");
+        }
+
+        if (!oldStatus.canTransitionTo(newStatus)) {
+            throw new InvalidStatusTransitionException("Invalid status transition");
         }
 
         repo.setUpdate(task, id);

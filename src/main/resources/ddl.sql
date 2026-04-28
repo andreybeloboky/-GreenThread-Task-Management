@@ -1,6 +1,6 @@
 CREATE TABLE tasks (
                        id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-                       title VARCHAR(100) NOT NULL UNIQUE,
+                       title VARCHAR NOT NULL UNIQUE,
                        description TEXT NOT NULL,
                        status VARCHAR NOT NULL DEFAULT 'PENDING',
                        duedate DATE NOT NULL,
