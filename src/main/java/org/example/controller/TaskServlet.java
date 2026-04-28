@@ -72,8 +72,8 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        TaskInputDTO createTask = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
         try {
+            TaskInputDTO createTask = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
             validateData(createTask);
             TaskInputDTO create = task.createTask(createTask);
 
@@ -85,6 +85,10 @@ public class TaskServlet extends HttpServlet {
         } catch (DataExistsException e) {
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             resp.getWriter().write(e.getMessage());
+        } catch (JsonProcessingException e) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            resp.setContentType("application/json");
+            resp.getWriter().write("{\"error\":\"Invalid JSON format\"}");
         } catch (ValidationException e) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write(e.getMessage());
@@ -105,7 +109,7 @@ public class TaskServlet extends HttpServlet {
         } catch (DataExistsException | InvalidStatusTransitionException e) {
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             resp.getWriter().write(e.getMessage());
-        }catch (ValidationException e) {
+        } catch (ValidationException e) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write(e.getMessage());
         }
