@@ -22,7 +22,7 @@ public class ResponseWrapper extends HttpServletResponseWrapper {
     }
 
     @Override
-    public synchronized ServletOutputStream getOutputStream() {
+    public ServletOutputStream getOutputStream() {
         if (outputStream == null) {
             outputStream = new ServletOutputStream() {
                 @Override
@@ -41,7 +41,7 @@ public class ResponseWrapper extends HttpServletResponseWrapper {
     }
 
     @Override
-    public synchronized PrintWriter getWriter() {
+    public PrintWriter getWriter() {
         if (writer == null) {
             writer = new PrintWriter(new OutputStreamWriter(buffer, StandardCharsets.UTF_8),true);
         }

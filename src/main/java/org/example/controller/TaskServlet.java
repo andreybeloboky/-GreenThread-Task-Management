@@ -85,13 +85,12 @@ public class TaskServlet extends HttpServlet {
         } catch (DataExistsException e) {
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             resp.getWriter().write(e.getMessage());
-        } catch (JsonProcessingException e) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.setContentType("application/json");
-            resp.getWriter().write("{\"error\":\"Invalid JSON format\"}");
         } catch (ValidationException e) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write(e.getMessage());
+        } catch (JsonProcessingException e) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            resp.getWriter().write("{\"error\":\"Invalid JSON format\"}" + e.getMessage());
         }
     }
 
@@ -138,7 +137,9 @@ public class TaskServlet extends HttpServlet {
             for (ConstraintViolation<TaskInputDTO> violation : violations) {
                 errors.put(violation.getPropertyPath().toString(), violation.getMessage());
             }
-            throw new ValidationException(mapper.writeValueAsString(errors));
+            Map<String, Object> responseBody = new HashMap<>();
+            responseBody.put("errors", errors);
+            throw new ValidationException(mapper.writeValueAsString(responseBody));
         }
     }
 }
