@@ -10,7 +10,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.example.controller.TaskStatus;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Setter
@@ -29,7 +29,7 @@ public class TaskInputDTO {
     @NotNull(message = "Due date is required")
     @Future(message = "Due date must be in the future")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-    private LocalDateTime date;
+    private Instant date;
 
     @JsonProperty
     private TaskStatus status;

@@ -91,12 +91,7 @@ public class TaskJDBCRepository {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT)) {
             log.info("Connection opened for insert task");
-            preparedStatement.setString(1, task.getTitle());
-            preparedStatement.setString(2, task.getDescription());
-            preparedStatement.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
-            preparedStatement.setTimestamp(4,
-                    Timestamp.valueOf(task.getDate()),
-                    Calendar.getInstance(TimeZone.getTimeZone("UTC")));
+            bindTaskParams(preparedStatement, task);
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("Incorrect data", e);
@@ -112,18 +107,13 @@ public class TaskJDBCRepository {
             log.debug("Transaction started (autoCommit=false)");
 
             try (PreparedStatement ps = connection.prepareStatement(UPDATE)) {
-                ps.setString(1, task.getTitle());
-                ps.setString(2, task.getDescription());
-                ps.setString(3, task.getStatus().toString());
-                ps.setTimestamp(4, Timestamp.valueOf(task.getDate()), Calendar.getInstance(TimeZone.getTimeZone("UTC")));
+                bindTaskParams(ps, task);
                 ps.setInt(5, id);
-
                 int rows = ps.executeUpdate();
                 log.info("Update executed for id={}, affected rows={}", id, rows);
                 connection.commit();
                 log.debug("Transaction committed successfully");
             }
-
         } catch (SQLException e) {
             if (connection != null) {
                 try {
@@ -159,6 +149,13 @@ public class TaskJDBCRepository {
         } catch (SQLException e) {
             throw new DataAccessException("Element doesn't exist", e);
         }
+    }
+
+    private void bindTaskParams(PreparedStatement ps, TaskInputDTO task) throws SQLException {
+        ps.setString(1, task.getTitle());
+        ps.setString(2, task.getDescription());
+        ps.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
+        ps.setObject(4, task.getDate());
     }
 
 
