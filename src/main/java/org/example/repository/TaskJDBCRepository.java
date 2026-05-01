@@ -8,7 +8,10 @@ import org.example.dto.TaskOutputDTO;
 import org.example.exception.DataAccessException;
 
 import java.sql.*;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 
 @Slf4j
@@ -75,18 +78,6 @@ public class TaskJDBCRepository {
         }
     }
 
-    private TaskOutputDTO getElement(ResultSet rs) throws SQLException {
-        TaskOutputDTO obj = new TaskOutputDTO();
-        obj.setTitle(rs.getString(2));
-        obj.setDescription(rs.getString(3));
-        obj.setStatus(TaskStatus.valueOf(rs.getString(4)));
-        Timestamp ts = rs.getTimestamp(5);
-        LocalDateTime localDate = ts.toLocalDateTime();
-        obj.setDate(localDate);
-        return obj;
-    }
-
-
     public void insert(TaskInputDTO task) {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT)) {
@@ -151,11 +142,24 @@ public class TaskJDBCRepository {
         }
     }
 
+    private TaskOutputDTO getElement(ResultSet rs) throws SQLException {
+        TaskOutputDTO obj = new TaskOutputDTO();
+        obj.setId(rs.getInt(1));
+        obj.setTitle(rs.getString(2));
+        obj.setDescription(rs.getString(3));
+        obj.setStatus(TaskStatus.valueOf(rs.getString(4)));
+        OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
+        Instant date = odt.toInstant();
+        obj.setDate(date);
+        return obj;
+    }
+
     private void bindTaskParams(PreparedStatement ps, TaskInputDTO task) throws SQLException {
         ps.setString(1, task.getTitle());
         ps.setString(2, task.getDescription());
         ps.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
-        ps.setObject(4, task.getDate());
+        OffsetDateTime odt = task.getDate().atOffset(ZoneOffset.UTC);
+        ps.setObject(4, odt);
     }
 
 

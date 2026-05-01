@@ -66,6 +66,7 @@ public class TaskServlet extends HttpServlet {
             mapper.writeValue(resp.getWriter(), new ArrayList<>());
             return;
         }
+
         resp.setStatus(HttpServletResponse.SC_OK);
         mapper.writeValue(resp.getWriter(), data);
     }
@@ -81,7 +82,7 @@ public class TaskServlet extends HttpServlet {
             resp.setContentType(CONTENT_TYPE_JSON);
             resp.setCharacterEncoding(ENCODING_UTF8);
             mapper.writeValue(resp.getWriter(), create);
-
+            resp.setHeader("Location", String.format("/GreenThread-Task-Management/tasks/%s", create.getId()));
         } catch (DataExistsException e) {
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             resp.getWriter().write(e.getMessage());

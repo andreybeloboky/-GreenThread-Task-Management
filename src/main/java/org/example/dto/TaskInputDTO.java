@@ -15,6 +15,9 @@ import java.time.Instant;
 @Getter
 @Setter
 public class TaskInputDTO {
+    @JsonProperty
+    @Getter
+    private int id;
 
     @JsonProperty
     @NotBlank(message = "Title cannot be empty")
