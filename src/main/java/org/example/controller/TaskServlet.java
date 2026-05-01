@@ -77,12 +77,12 @@ public class TaskServlet extends HttpServlet {
             TaskInputDTO createTask = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
             validateData(createTask);
             TaskInputDTO create = task.createTask(createTask);
-
             resp.setStatus(HttpServletResponse.SC_CREATED);
             resp.setContentType(CONTENT_TYPE_JSON);
             resp.setCharacterEncoding(ENCODING_UTF8);
             mapper.writeValue(resp.getWriter(), create);
-            resp.setHeader("Location", String.format("/GreenThread-Task-Management/tasks/%s", create.getId()));
+            String appName = req.getContextPath();
+            resp.setHeader("Location", appName + "/" + create.getId());
         } catch (DataExistsException e) {
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             resp.getWriter().write(e.getMessage());
@@ -91,7 +91,7 @@ public class TaskServlet extends HttpServlet {
             resp.getWriter().write(e.getMessage());
         } catch (JsonProcessingException e) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\":\"Invalid JSON format\"}" + e.getMessage());
+            resp.getWriter().write("{\"error\":\"Invalid JSON format\"}" + e.getOriginalMessage());
         }
     }
 

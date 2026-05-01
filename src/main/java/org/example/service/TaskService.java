@@ -31,7 +31,8 @@ public class TaskService {
             throw new DataExistsException("This task is already created");
         }
 
-        repo.insert(createTask);
+        int id = repo.insert(createTask);
+        createTask.setId(id);
         return createTask;
     }
 

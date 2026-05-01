@@ -21,7 +21,7 @@ public class TaskJDBCRepository {
     private static final String SELECT = "SELECT * FROM tasks t ORDER BY t.id";
     private static final String SELECT_ID = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
     private static final String SELECT_TITLE = "SELECT * FROM tasks t WHERE title = ?";
-    private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?)";
+    private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?) RETURNING id";
     private static final String UPDATE = "UPDATE tasks SET title = ?, description= ?, status= ?, duedate= ? WHERE id = ?";
     private static final String DELETE = "DELETE FROM tasks WHERE id = ?";
 
@@ -78,12 +78,11 @@ public class TaskJDBCRepository {
         }
     }
 
-    public void insert(TaskInputDTO task) {
+    public int insert(TaskInputDTO task) {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT)) {
             log.info("Connection opened for insert task");
-            bindTaskParams(preparedStatement, task);
-            preparedStatement.executeUpdate();
+            return bindTaskParams(preparedStatement, task);
         } catch (SQLException e) {
             throw new DataAccessException("Incorrect data", e);
         }
@@ -154,12 +153,20 @@ public class TaskJDBCRepository {
         return obj;
     }
 
-    private void bindTaskParams(PreparedStatement ps, TaskInputDTO task) throws SQLException {
+    private int bindTaskParams(PreparedStatement ps, TaskInputDTO task) throws SQLException {
         ps.setString(1, task.getTitle());
         ps.setString(2, task.getDescription());
         ps.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
         OffsetDateTime odt = task.getDate().atOffset(ZoneOffset.UTC);
         ps.setObject(4, odt);
+
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt("id");
+            } else {
+                throw new SQLException("Creating failed, no ID obtained.");
+            }
+        }
     }
 
 
