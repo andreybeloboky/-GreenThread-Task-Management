@@ -91,7 +91,12 @@ public class TaskServlet extends HttpServlet {
             resp.getWriter().write(e.getMessage());
         } catch (JsonProcessingException e) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\":\"Invalid JSON format\"}" + e.getOriginalMessage());
+
+            Map<String, String> errorBody = new HashMap<>();
+            errorBody.put("error", "Invalid JSON format");
+            errorBody.put("details", e.getOriginalMessage());
+
+            mapper.writeValue(resp.getWriter(), errorBody);
         }
     }
 
@@ -127,8 +132,12 @@ public class TaskServlet extends HttpServlet {
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } else {
             resp.sendError(HttpServletResponse.SC_CONFLICT, "Task is not found");
-            return;
         }
+    }
+
+    @Override
+    public void destroy() {
+        ds.close();
     }
 
     private void validateData(TaskInputDTO task) throws JsonProcessingException {

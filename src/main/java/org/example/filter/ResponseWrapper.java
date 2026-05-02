@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 public class ResponseWrapper extends HttpServletResponseWrapper {
 
-    private ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     private ServletOutputStream outputStream;
     private PrintWriter writer;
 
@@ -31,10 +31,13 @@ public class ResponseWrapper extends HttpServletResponseWrapper {
                 }
 
                 @Override
-                public boolean isReady() { return true; }
+                public boolean isReady() {
+                    return true;
+                }
 
                 @Override
-                public void setWriteListener(WriteListener writeListener) {}
+                public void setWriteListener(WriteListener writeListener) {
+                }
             };
         }
         return outputStream;
@@ -43,7 +46,7 @@ public class ResponseWrapper extends HttpServletResponseWrapper {
     @Override
     public PrintWriter getWriter() {
         if (writer == null) {
-            writer = new PrintWriter(new OutputStreamWriter(buffer, StandardCharsets.UTF_8),true);
+            writer = new PrintWriter(new OutputStreamWriter(buffer, StandardCharsets.UTF_8), true);
         }
         return writer;
     }
@@ -64,7 +67,7 @@ public class ResponseWrapper extends HttpServletResponseWrapper {
                 outputStream.close();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException();
         }
     }
 }

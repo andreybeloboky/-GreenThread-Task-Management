@@ -15,6 +15,7 @@ import java.time.Instant;
 @Getter
 @Setter
 public class TaskInputDTO {
+
     @JsonProperty
     @Getter
     private int id;

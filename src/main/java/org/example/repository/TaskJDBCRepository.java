@@ -9,7 +9,6 @@ import org.example.exception.DataAccessException;
 
 import java.sql.*;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -126,7 +125,6 @@ public class TaskJDBCRepository {
             }
         }
     }
-
 
     public boolean delete(int id) {
         try (Connection connection = openConnection();
