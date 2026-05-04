@@ -59,14 +59,12 @@ public class TaskServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         ArrayList<TaskOutputDTO> data = task.takeAllElements();
-        resp.setContentType(CONTENT_TYPE_JSON);
-        resp.setCharacterEncoding(ENCODING_UTF8);
+        setJsonHeaders(resp);
         if (data == null || data.isEmpty()) {
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), new ArrayList<>());
             return;
         }
-
         resp.setStatus(HttpServletResponse.SC_OK);
         mapper.writeValue(resp.getWriter(), data);
     }
@@ -78,18 +76,20 @@ public class TaskServlet extends HttpServlet {
             validateData(createTask);
             TaskInputDTO create = task.createTask(createTask);
             resp.setStatus(HttpServletResponse.SC_CREATED);
-            resp.setContentType(CONTENT_TYPE_JSON);
-            resp.setCharacterEncoding(ENCODING_UTF8);
+            setJsonHeaders(resp);
             mapper.writeValue(resp.getWriter(), create);
             String appName = req.getContextPath();
             resp.setHeader("Location", appName + "/" + create.getId());
         } catch (DataExistsException e) {
+            setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             resp.getWriter().write(e.getMessage());
         } catch (ValidationException e) {
+            setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write(e.getMessage());
         } catch (JsonProcessingException e) {
+            setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 
             Map<String, String> errorBody = new HashMap<>();
@@ -108,17 +108,18 @@ public class TaskServlet extends HttpServlet {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter" + idParam);
             return;
         }
-        resp.setContentType(CONTENT_TYPE_JSON);
-        resp.setCharacterEncoding(ENCODING_UTF8);
+        setJsonHeaders(resp);
         try {
             validateData(updateDate);
-            TaskInputDTO updateData = task.update(id, updateDate);
+            TaskInputDTO updateData = task.update(idParam, updateDate);
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), updateData);
         } catch (DataExistsException | InvalidStatusTransitionException e) {
+            setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             resp.getWriter().write(e.getMessage());
         } catch (ValidationException e) {
+            setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             resp.getWriter().write(e.getMessage());
         }
@@ -131,12 +132,9 @@ public class TaskServlet extends HttpServlet {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter" + idParam);
             return;
         }
-        boolean deleted = task.delete(idParam);
-        if (deleted) {
-            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
-        } else {
-            resp.sendError(HttpServletResponse.SC_CONFLICT, "Task is not found");
-        }
+        task.delete(idParam);
+        resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+
     }
 
     @Override
@@ -155,5 +153,10 @@ public class TaskServlet extends HttpServlet {
             responseBody.put("errors", errors);
             throw new ValidationException(mapper.writeValueAsString(responseBody));
         }
+    }
+
+    private void setJsonHeaders(HttpServletResponse resp) {
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
     }
 }

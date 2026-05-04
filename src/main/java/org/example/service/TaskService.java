@@ -57,7 +57,7 @@ public class TaskService {
         return task;
     }
 
-    public boolean delete(int id) {
-        return repo.delete(id);
+    public void delete(int id) {
+        repo.delete(id);
     }
 }
