@@ -137,11 +137,6 @@ public class TaskServlet extends HttpServlet {
 
     }
 
-    @Override
-    public void destroy() {
-        ds.close();
-    }
-
     private void validateData(TaskInputDTO task) throws JsonProcessingException {
         Set<ConstraintViolation<TaskInputDTO>> violations = val.validate(task);
         if (!violations.isEmpty()) {
