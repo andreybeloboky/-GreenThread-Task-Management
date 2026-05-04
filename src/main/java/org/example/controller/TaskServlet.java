@@ -103,7 +103,11 @@ public class TaskServlet extends HttpServlet {
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         TaskInputDTO updateDate = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
-        int id = Integer.parseInt(req.getParameter("id"));
+        int idParam = Integer.parseInt(req.getParameter("id"));
+        if (idParam < 0) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter" + idParam);
+            return;
+        }
         resp.setContentType(CONTENT_TYPE_JSON);
         resp.setCharacterEncoding(ENCODING_UTF8);
         try {
