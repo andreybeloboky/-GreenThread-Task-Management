@@ -151,7 +151,7 @@ public class TaskServlet extends HttpServlet {
     }
 
     private void setJsonHeaders(HttpServletResponse resp) {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
+        resp.setContentType(CONTENT_TYPE_JSON);
+        resp.setCharacterEncoding(ENCODING_UTF8);
     }
 }
