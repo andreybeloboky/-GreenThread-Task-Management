@@ -97,17 +97,24 @@ public class TaskJDBCRepository {
         }
     }
 
-    public int insert(TaskRequest task) {
+    public int insert(Task task) {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT)) {
             log.info("Connection opened for insert task");
-            return bindTaskParams(preparedStatement, task);
+            bindTaskParams(preparedStatement, task);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("id");
+                } else {
+                    throw new SQLException("Creating failed, no ID obtained.");
+                }
+            }
         } catch (SQLException e) {
             throw new DataAccessException("Incorrect data", e);
         }
     }
 
-    public void setUpdate(TaskRequest task, int id) {
+    public void setUpdate(Task task, int id) {
         Connection connection = null;
         try {
             connection = openConnection();
@@ -183,20 +190,12 @@ public class TaskJDBCRepository {
         return obj;
     }
 
-    private int bindTaskParams(PreparedStatement ps, TaskRequest task) throws SQLException {
+    private void bindTaskParams(PreparedStatement ps, Task task) throws SQLException {
         ps.setString(1, task.getTitle());
         ps.setString(2, task.getDescription());
         ps.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
         OffsetDateTime odt = task.getDate().atOffset(ZoneOffset.UTC);
         ps.setObject(4, odt);
-
-        try (ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) {
-                return rs.getInt("id");
-            } else {
-                throw new SQLException("Creating failed, no ID obtained.");
-            }
-        }
     }
 
 

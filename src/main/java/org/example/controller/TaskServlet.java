@@ -18,6 +18,7 @@ import org.example.dto.TaskRequest;
 import org.example.dto.TaskResponse;
 import org.example.exception.DataExistsException;
 import org.example.exception.InvalidStatusTransitionException;
+import org.example.model.Subtask;
 import org.example.model.Task;
 import org.example.service.TaskService;
 
@@ -76,10 +77,12 @@ public class TaskServlet extends HttpServlet {
         try {
             TaskRequest createTask = mapper.readValue(req.getInputStream(), TaskRequest.class);
             validateData(createTask);
-            TaskRequest create = task.create(createTask);
+            Task create = task.create(createTask);
+            TaskResponse taskDTO = new TaskResponse(create);
+
             resp.setStatus(HttpServletResponse.SC_CREATED);
             setJsonHeaders(resp);
-            mapper.writeValue(resp.getWriter(), create);
+            mapper.writeValue(resp.getWriter(), taskDTO);
             String appName = req.getContextPath();
             resp.setHeader("Location", appName + "/" + create.getId());
         } catch (DataExistsException e) {
@@ -113,7 +116,11 @@ public class TaskServlet extends HttpServlet {
         setJsonHeaders(resp);
         try {
             validateData(updateDate);
-            TaskRequest updateData = task.update(idParam, updateDate);
+            Task updateData = task.update(idParam, updateDate);
+
+            List<Subtask> test = task.findAllSubtask();
+            updateData.setSubtasks(test);
+
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), updateData);
         } catch (DataExistsException | InvalidStatusTransitionException e) {
