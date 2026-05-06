@@ -18,7 +18,6 @@ import org.example.dto.TaskRequest;
 import org.example.dto.TaskResponse;
 import org.example.exception.DataExistsException;
 import org.example.exception.InvalidStatusTransitionException;
-import org.example.model.Subtask;
 import org.example.model.Task;
 import org.example.service.TaskService;
 
@@ -117,12 +116,9 @@ public class TaskServlet extends HttpServlet {
         try {
             validateData(updateDate);
             Task updateData = task.update(idParam, updateDate);
-
-            List<Subtask> test = task.findAllSubtask();
-            updateData.setSubtasks(test);
-
+            TaskResponse taskDTO = new TaskResponse(updateData);
             resp.setStatus(HttpServletResponse.SC_OK);
-            mapper.writeValue(resp.getWriter(), updateData);
+            mapper.writeValue(resp.getWriter(), taskDTO);
         } catch (DataExistsException | InvalidStatusTransitionException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
@@ -141,9 +137,14 @@ public class TaskServlet extends HttpServlet {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter" + idParam);
             return;
         }
-        task.delete(idParam);
-        resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
-
+        try {
+            task.delete(idParam);
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        }catch (DataExistsException e){
+            setJsonHeaders(resp);
+            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
+        }
     }
 
     private void validateData(TaskRequest task) throws JsonProcessingException {

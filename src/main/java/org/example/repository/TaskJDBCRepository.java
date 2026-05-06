@@ -20,9 +20,10 @@ public class TaskJDBCRepository {
 
     private final HikariDataSource dataSource;
     private static final String SELECT_TASK = "SELECT * FROM tasks t ORDER BY t.id";
-    private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks t ORDER BY t.id";
+    private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks s ORDER BY s.id";
     private static final String SELECT_ID = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
     private static final String SELECT_TITLE = "SELECT * FROM tasks t WHERE title = ?";
+    private static final String SELECT_TITLE_SUBTASK = "SELECT * FROM subtasks s WHERE task_id = ?";
     private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?) RETURNING id";
     private static final String UPDATE = "UPDATE tasks SET title = ?, description= ?, status= ?, duedate= ? WHERE id = ?";
     private static final String DELETE = "DELETE FROM tasks WHERE id = ?";
@@ -84,13 +85,29 @@ public class TaskJDBCRepository {
     public Optional<Task> findByTitle(String title) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE)) {
-            preparedStatement.setString(1, title);
+            preparedStatement.setString(2, title);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 log.info("Connection opened for find by title element task");
                 if (!rs.next()) {
                     return Optional.empty();
                 }
                 return Optional.of(getTask(rs));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Optional<Subtask> findByTitleSubtask(int id) {
+        try (Connection conn = openConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE_SUBTASK)) {
+            preparedStatement.setInt(1, id);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                log.info("Connection opened for find by title element task");
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(getSubtask(rs));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
