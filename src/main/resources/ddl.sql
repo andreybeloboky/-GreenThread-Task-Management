@@ -20,5 +20,5 @@ CREATE TABLE subtasks
     CONSTRAINT fk_task
         FOREIGN KEY (task_id)
             REFERENCES tasks (id)
-            ON DELETE CASCADE
+            ON DELETE RESTRICT
 )

@@ -1,28 +1,20 @@
-package org.example.dto;
+package org.example.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 import org.example.controller.TaskStatus;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
-@Getter
 @Setter
-public class TaskOutputDTO {
-
-    @JsonProperty
+@Getter
+public class Task {
     private int id;
-
-    @JsonProperty
     private String title;
-
-    @JsonProperty
     private String description;
-
-    @JsonProperty
     private Instant date;
-
-    @JsonProperty
     private TaskStatus status;
+    List<Subtask> subtasks = new ArrayList<>();
 }

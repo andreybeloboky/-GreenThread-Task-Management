@@ -1,15 +1,18 @@
 package org.example.service;
 
 import com.zaxxer.hikari.HikariDataSource;
-import org.example.dto.TaskInputDTO;
+import org.example.dto.TaskRequest;
 import org.example.controller.TaskStatus;
-import org.example.dto.TaskOutputDTO;
 import org.example.exception.DataExistsException;
 import org.example.exception.InvalidStatusTransitionException;
+import org.example.model.Subtask;
+import org.example.model.Task;
 import org.example.repository.TaskJDBCRepository;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 public class TaskService {
@@ -20,12 +23,27 @@ public class TaskService {
         this.repo = new TaskJDBCRepository(ds);
     }
 
-    public ArrayList<TaskOutputDTO> takeAllElements() {
-        return repo.getList();
+    public ArrayList<Task> findAllTask() {
+        ArrayList<Task> tasks = repo.getTasksList();
+        ArrayList<Subtask> subtasks = repo.getSubtasksList();
+
+
+        for (Task task : tasks) {
+            List<Subtask> related = subtasks.stream()
+                    .filter(s -> s.getTask_id() == task.getId())
+                    .collect(Collectors.toList());
+            task.setSubtasks(related);
+        }
+
+        return tasks;
     }
 
-    public TaskInputDTO createTask(TaskInputDTO createTask) {
-        Optional<TaskOutputDTO> theSameTitleName = repo.findByTitle(createTask.getTitle());
+    public ArrayList<Subtask> findAllSubtask() {
+        return repo.getSubtasksList();
+    }
+
+    public TaskRequest create(TaskRequest createTask) {
+        Optional<Task> theSameTitleName = repo.findByTitle(createTask.getTitle());
 
         if (theSameTitleName.isPresent()) {
             throw new DataExistsException("This task is already created");
@@ -36,8 +54,8 @@ public class TaskService {
         return createTask;
     }
 
-    public TaskInputDTO update(int id, TaskInputDTO task) {
-        Optional<TaskOutputDTO> oldTask = repo.findById(id);
+    public TaskRequest update(int id, TaskRequest task) {
+        Optional<Task> oldTask = repo.findById(id);
         if (oldTask.isEmpty()) {
             throw new DataExistsException("Id " + id + " doesn't exist");
         }

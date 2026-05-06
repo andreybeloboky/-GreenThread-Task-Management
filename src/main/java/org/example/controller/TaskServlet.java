@@ -14,17 +14,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
-import org.example.dto.TaskInputDTO;
-import org.example.dto.TaskOutputDTO;
+import org.example.dto.TaskRequest;
+import org.example.dto.TaskResponse;
 import org.example.exception.DataExistsException;
 import org.example.exception.InvalidStatusTransitionException;
+import org.example.model.Task;
 import org.example.service.TaskService;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @WebServlet("/tasks")
 public class TaskServlet extends HttpServlet {
@@ -58,23 +56,27 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        ArrayList<TaskOutputDTO> data = task.takeAllElements();
+        ArrayList<Task> data = task.findAllTask();
         setJsonHeaders(resp);
         if (data == null || data.isEmpty()) {
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), new ArrayList<>());
             return;
         }
+        List<TaskResponse> dtoList = data.stream()
+                .map(TaskResponse::new)
+                .toList();
+
         resp.setStatus(HttpServletResponse.SC_OK);
-        mapper.writeValue(resp.getWriter(), data);
+        mapper.writeValue(resp.getWriter(), dtoList);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         try {
-            TaskInputDTO createTask = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
+            TaskRequest createTask = mapper.readValue(req.getInputStream(), TaskRequest.class);
             validateData(createTask);
-            TaskInputDTO create = task.createTask(createTask);
+            TaskRequest create = task.create(createTask);
             resp.setStatus(HttpServletResponse.SC_CREATED);
             setJsonHeaders(resp);
             mapper.writeValue(resp.getWriter(), create);
@@ -102,7 +104,7 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        TaskInputDTO updateDate = mapper.readValue(req.getInputStream(), TaskInputDTO.class);
+        TaskRequest updateDate = mapper.readValue(req.getInputStream(), TaskRequest.class);
         int idParam = Integer.parseInt(req.getParameter("id"));
         if (idParam < 0) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter" + idParam);
@@ -111,7 +113,7 @@ public class TaskServlet extends HttpServlet {
         setJsonHeaders(resp);
         try {
             validateData(updateDate);
-            TaskInputDTO updateData = task.update(idParam, updateDate);
+            TaskRequest updateData = task.update(idParam, updateDate);
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), updateData);
         } catch (DataExistsException | InvalidStatusTransitionException e) {
@@ -137,11 +139,11 @@ public class TaskServlet extends HttpServlet {
 
     }
 
-    private void validateData(TaskInputDTO task) throws JsonProcessingException {
-        Set<ConstraintViolation<TaskInputDTO>> violations = val.validate(task);
+    private void validateData(TaskRequest task) throws JsonProcessingException {
+        Set<ConstraintViolation<TaskRequest>> violations = val.validate(task);
         if (!violations.isEmpty()) {
             Map<String, String> errors = new HashMap<>();
-            for (ConstraintViolation<TaskInputDTO> violation : violations) {
+            for (ConstraintViolation<TaskRequest> violation : violations) {
                 errors.put(violation.getPropertyPath().toString(), violation.getMessage());
             }
             Map<String, Object> responseBody = new HashMap<>();

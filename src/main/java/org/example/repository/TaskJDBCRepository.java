@@ -2,10 +2,12 @@ package org.example.repository;
 
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
-import org.example.dto.TaskInputDTO;
+import org.example.dto.SubtaskResponse;
+import org.example.dto.TaskRequest;
 import org.example.controller.TaskStatus;
-import org.example.dto.TaskOutputDTO;
 import org.example.exception.DataAccessException;
+import org.example.model.Subtask;
+import org.example.model.Task;
 
 import java.sql.*;
 import java.time.Instant;
@@ -17,7 +19,8 @@ import java.util.*;
 public class TaskJDBCRepository {
 
     private final HikariDataSource dataSource;
-    private static final String SELECT = "SELECT * FROM tasks t ORDER BY t.id";
+    private static final String SELECT_TASK = "SELECT * FROM tasks t ORDER BY t.id";
+    private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks t ORDER BY t.id";
     private static final String SELECT_ID = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
     private static final String SELECT_TITLE = "SELECT * FROM tasks t WHERE title = ?";
     private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?) RETURNING id";
@@ -28,14 +31,14 @@ public class TaskJDBCRepository {
         this.dataSource = dataSource;
     }
 
-    public ArrayList<TaskOutputDTO> getList() {
-        ArrayList<TaskOutputDTO> list = new ArrayList<>();
+    public ArrayList<Task> getTasksList() {
+        ArrayList<Task> list = new ArrayList<>();
         try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(SELECT);
+             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TASK);
              ResultSet rs = preparedStatement.executeQuery()) {
             log.info("Connection opened for take all elements task");
             while (rs.next()) {
-                TaskOutputDTO obj = getElement(rs);
+                Task obj = getTask(rs);
                 list.add(obj);
                 log.info("Added an element to list");
             }
@@ -45,7 +48,24 @@ public class TaskJDBCRepository {
         return list;
     }
 
-    public Optional<TaskOutputDTO> findById(int id) {
+    public ArrayList<Subtask> getSubtasksList() {
+        ArrayList<Subtask> list = new ArrayList<>();
+        try (Connection conn = openConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_SUBTASKS);
+             ResultSet rs = preparedStatement.executeQuery()) {
+            log.info("Connection opened for take all elements task");
+            while (rs.next()) {
+                Subtask obj = getSubtask(rs);
+                list.add(obj);
+                log.info("Added an element to list");
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return list;
+    }
+
+    public Optional<Task> findById(int id) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID)) {
             preparedStatement.setInt(1, id);
@@ -54,14 +74,14 @@ public class TaskJDBCRepository {
                 if (!rs.next()) {
                     return Optional.empty();
                 }
-                return Optional.of(getElement(rs));
+                return Optional.of(getTask(rs));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public Optional<TaskOutputDTO> findByTitle(String title) {
+    public Optional<Task> findByTitle(String title) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE)) {
             preparedStatement.setString(1, title);
@@ -70,14 +90,14 @@ public class TaskJDBCRepository {
                 if (!rs.next()) {
                     return Optional.empty();
                 }
-                return Optional.of(getElement(rs));
+                return Optional.of(getTask(rs));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public int insert(TaskInputDTO task) {
+    public int insert(TaskRequest task) {
         try (Connection connection = openConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT)) {
             log.info("Connection opened for insert task");
@@ -87,7 +107,7 @@ public class TaskJDBCRepository {
         }
     }
 
-    public void setUpdate(TaskInputDTO task, int id) {
+    public void setUpdate(TaskRequest task, int id) {
         Connection connection = null;
         try {
             connection = openConnection();
@@ -139,8 +159,8 @@ public class TaskJDBCRepository {
         }
     }
 
-    private TaskOutputDTO getElement(ResultSet rs) throws SQLException {
-        TaskOutputDTO obj = new TaskOutputDTO();
+    private Task getTask(ResultSet rs) throws SQLException {
+        Task obj = new Task();
         obj.setId(rs.getInt(1));
         obj.setTitle(rs.getString(2));
         obj.setDescription(rs.getString(3));
@@ -151,7 +171,19 @@ public class TaskJDBCRepository {
         return obj;
     }
 
-    private int bindTaskParams(PreparedStatement ps, TaskInputDTO task) throws SQLException {
+    private Subtask getSubtask(ResultSet rs) throws SQLException {
+        Subtask obj = new Subtask();
+        obj.setTask_id(rs.getInt(2));
+        obj.setTitle(rs.getString(3));
+        obj.setCompleted(rs.getBoolean(4));
+        /*OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
+        Instant date = odt.toInstant();
+        obj.setDate(date);
+         */
+        return obj;
+    }
+
+    private int bindTaskParams(PreparedStatement ps, TaskRequest task) throws SQLException {
         ps.setString(1, task.getTitle());
         ps.setString(2, task.getDescription());
         ps.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
