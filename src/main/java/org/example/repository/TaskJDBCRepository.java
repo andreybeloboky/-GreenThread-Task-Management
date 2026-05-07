@@ -26,7 +26,8 @@ public class TaskJDBCRepository {
     private static final String INSERT_TASK = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?) RETURNING id";
     private static final String INSERT_SUBTASK = "INSERT INTO subtasks (task_id, title, completed) VALUES (?,?,?) RETURNING id";
     private static final String UPDATE = "UPDATE tasks SET title = ?, description= ?, status= ?, duedate= ? WHERE id = ?";
-    private static final String DELETE = "DELETE FROM tasks WHERE id = ?";
+    private static final String DELETE_TASK = "DELETE FROM tasks WHERE id = ?";
+    private static final String DELETE_SUBTASK = "DELETE FROM subtasks WHERE id = ?";
 
     public TaskJDBCRepository(HikariDataSource dataSource) {
         this.dataSource = dataSource;
@@ -203,9 +204,22 @@ public class TaskJDBCRepository {
         }
     }
 
-    public boolean delete(int id) {
+    public boolean deleteTask(int id) {
         try (Connection connection = openConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(DELETE)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(DELETE_TASK)) {
+            preparedStatement.setInt(1, id);
+            log.info("Connection opened for delete task id={}", id);
+            int rows = preparedStatement.executeUpdate();
+            log.info("Delete executed for id={}", id);
+            return rows != 0;
+        } catch (SQLException e) {
+            throw new DataAccessException("Element doesn't exist", e);
+        }
+    }
+
+    public boolean deleteSubtask(int id) {
+        try (Connection connection = openConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(DELETE_SUBTASK)) {
             preparedStatement.setInt(1, id);
             log.info("Connection opened for delete task id={}", id);
             int rows = preparedStatement.executeUpdate();

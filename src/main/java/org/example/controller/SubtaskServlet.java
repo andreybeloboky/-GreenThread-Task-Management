@@ -15,6 +15,7 @@ import jakarta.validation.Validator;
 import org.example.dto.SubtaskRequest;
 import org.example.dto.SubtaskResponse;
 import org.example.dto.TaskRequest;
+import org.example.exception.DataExistsException;
 import org.example.model.Subtask;
 import org.example.model.Task;
 import org.example.service.TaskService;
@@ -76,10 +77,25 @@ public class SubtaskServlet extends HttpServlet {
             resp.setContentType("application/json");
             resp.setStatus(HttpServletResponse.SC_OK);
             String appName = req.getContextPath();
-            resp.setHeader("Location", appName + "/" + subtaskResponse.getTitle());
+            resp.setHeader("Location", appName + "/subtasks/" + subtaskResponse.getId());
             mapper.writeValue(resp.getWriter(), subtaskResponse);
+        } catch (DataExistsException e) {
+            setJsonHeaders(resp);
+            resp.setStatus(HttpServletResponse.SC_CONFLICT);
+            resp.getWriter().write(e.getMessage());
         } catch (ValidationException e) {
+            setJsonHeaders(resp);
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            resp.getWriter().write(e.getMessage());
+        } catch (JsonProcessingException e) {
+            setJsonHeaders(resp);
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 
+            Map<String, String> errorBody = new HashMap<>();
+            errorBody.put("error", "Invalid JSON format");
+            errorBody.put("details", e.getOriginalMessage());
+
+            mapper.writeValue(resp.getWriter(), errorBody);
         }
     }
 
@@ -90,7 +106,19 @@ public class SubtaskServlet extends HttpServlet {
 
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
+        int idParam = Integer.parseInt(req.getParameter("id"));
+        if (idParam < 0) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter" + idParam);
+            return;
+        }
+        try {
+            task.deleteSubtask(idParam);
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        } catch (DataExistsException e) {
+            setJsonHeaders(resp);
+            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
+        }
     }
 
     private void setJsonHeaders(HttpServletResponse resp) {

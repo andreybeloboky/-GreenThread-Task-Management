@@ -94,16 +94,16 @@ public class TaskService {
         if (task.isPresent()) {
             throw new DataExistsException("This task includes subtasks. You can't delete it");
         } else {
-            repo.delete(id);
+            repo.deleteTask(id);
         }
     }
 
     public void deleteSubtask(int id) {
         Optional<Subtask> task = repo.findByIdSubtask(id);
-        if (task.isPresent()) {
-            throw new DataExistsException("This task includes subtasks. You can't delete it");
+        if (task.isEmpty()) {
+            throw new DataExistsException("This task doesn't exist");
         } else {
-            repo.delete(id);
+            repo.deleteSubtask(id);
         }
     }
 

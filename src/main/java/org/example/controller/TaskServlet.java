@@ -83,7 +83,7 @@ public class TaskServlet extends HttpServlet {
             setJsonHeaders(resp);
             mapper.writeValue(resp.getWriter(), taskResponse);
             String appName = req.getContextPath();
-            resp.setHeader("Location", appName + "/" + taskResponse.getId());
+            resp.setHeader("Location", appName + "/tasks/" + taskResponse.getId());
         } catch (DataExistsException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
