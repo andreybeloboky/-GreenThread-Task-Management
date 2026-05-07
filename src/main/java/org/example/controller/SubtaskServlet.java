@@ -1,5 +1,6 @@
 package org.example.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.ServletConfig;
@@ -8,13 +9,21 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
+import org.example.dto.SubtaskRequest;
+import org.example.dto.SubtaskResponse;
+import org.example.dto.TaskRequest;
 import org.example.model.Subtask;
 import org.example.model.Task;
 import org.example.service.TaskService;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 @WebServlet("/subtasks")
 public class SubtaskServlet extends HttpServlet {
@@ -58,7 +67,20 @@ public class SubtaskServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        try {
+            SubtaskRequest subtaskReq = mapper.readValue(req.getInputStream(), SubtaskRequest.class);
+            validateData(subtaskReq);
+            Subtask subtask = task.createSubtask(subtaskReq);
+            SubtaskResponse subtaskResponse = new SubtaskResponse(subtask);
 
+            resp.setContentType("application/json");
+            resp.setStatus(HttpServletResponse.SC_OK);
+            String appName = req.getContextPath();
+            resp.setHeader("Location", appName + "/" + subtaskResponse.getTitle());
+            mapper.writeValue(resp.getWriter(), subtaskResponse);
+        } catch (ValidationException e) {
+
+        }
     }
 
     @Override
@@ -74,5 +96,19 @@ public class SubtaskServlet extends HttpServlet {
     private void setJsonHeaders(HttpServletResponse resp) {
         resp.setContentType(CONTENT_TYPE_JSON);
         resp.setCharacterEncoding(ENCODING_UTF8);
+    }
+
+    private void validateData(SubtaskRequest task) throws JsonProcessingException {
+        Set<ConstraintViolation<SubtaskRequest>> violations = val.validate(task);
+        if (!violations.isEmpty()) {
+            Map<String, String> errors = new HashMap<>();
+            for (ConstraintViolation<SubtaskRequest> violation : violations) {
+                errors.put(violation.getPropertyPath().toString(), violation.getMessage());
+            }
+            Map<String, Object> responseBody = new HashMap<>();
+            responseBody.put("errors", errors);
+            responseBody.put("test", "test"); // todo test!!!!
+            throw new ValidationException(mapper.writeValueAsString(responseBody));
+        }
     }
 }

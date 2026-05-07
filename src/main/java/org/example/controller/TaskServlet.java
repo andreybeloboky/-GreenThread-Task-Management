@@ -77,13 +77,13 @@ public class TaskServlet extends HttpServlet {
             TaskRequest createTask = mapper.readValue(req.getInputStream(), TaskRequest.class);
             validateData(createTask);
             Task create = task.create(createTask);
-            TaskResponse taskDTO = new TaskResponse(create);
+            TaskResponse taskResponse = new TaskResponse(create);
 
             resp.setStatus(HttpServletResponse.SC_CREATED);
             setJsonHeaders(resp);
-            mapper.writeValue(resp.getWriter(), taskDTO);
+            mapper.writeValue(resp.getWriter(), taskResponse);
             String appName = req.getContextPath();
-            resp.setHeader("Location", appName + "/" + create.getId());
+            resp.setHeader("Location", appName + "/" + taskResponse.getId());
         } catch (DataExistsException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
@@ -138,9 +138,9 @@ public class TaskServlet extends HttpServlet {
             return;
         }
         try {
-            task.delete(idParam);
+            task.deleteTask(idParam);
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
-        }catch (DataExistsException e){
+        } catch (DataExistsException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
             mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));

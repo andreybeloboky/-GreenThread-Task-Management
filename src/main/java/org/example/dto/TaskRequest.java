@@ -17,7 +17,6 @@ import java.time.Instant;
 public class TaskRequest {
 
     @JsonProperty
-    @Getter
     private int id;
 
     @JsonProperty

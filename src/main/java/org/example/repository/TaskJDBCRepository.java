@@ -2,8 +2,6 @@ package org.example.repository;
 
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
-import org.example.dto.SubtaskResponse;
-import org.example.dto.TaskRequest;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataAccessException;
 import org.example.model.Subtask;
@@ -22,9 +20,11 @@ public class TaskJDBCRepository {
     private static final String SELECT_TASK = "SELECT * FROM tasks t ORDER BY t.id";
     private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks s ORDER BY s.id";
     private static final String SELECT_ID = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
+    private static final String SELECT_ID_SUBTASK = "SELECT * FROM subtasks s WHERE task_id = ? FOR UPDATE";
     private static final String SELECT_TITLE = "SELECT * FROM tasks t WHERE title = ?";
-    private static final String SELECT_TITLE_SUBTASK = "SELECT * FROM subtasks s WHERE task_id = ?";
-    private static final String INSERT = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?) RETURNING id";
+    private static final String SELECT_TITLE_SUBTASK = "SELECT * FROM subtasks t WHERE title = ?";
+    private static final String INSERT_TASK = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?) RETURNING id";
+    private static final String INSERT_SUBTASK = "INSERT INTO subtasks (task_id, title, completed) VALUES (?,?,?) RETURNING id";
     private static final String UPDATE = "UPDATE tasks SET title = ?, description= ?, status= ?, duedate= ? WHERE id = ?";
     private static final String DELETE = "DELETE FROM tasks WHERE id = ?";
 
@@ -66,7 +66,7 @@ public class TaskJDBCRepository {
         return list;
     }
 
-    public Optional<Task> findById(int id) {
+    public Optional<Task> findByIdTask(int id) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID)) {
             preparedStatement.setInt(1, id);
@@ -82,7 +82,7 @@ public class TaskJDBCRepository {
         }
     }
 
-    public Optional<Task> findByTitle(String title) {
+    public Optional<Task> findByTitleTask(String title) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE)) {
             preparedStatement.setString(2, title);
@@ -98,10 +98,26 @@ public class TaskJDBCRepository {
         }
     }
 
-    public Optional<Subtask> findByTitleSubtask(int id) {
+    public Optional<Subtask> findByIdSubtask(int id) {
+        try (Connection conn = openConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID_SUBTASK)) {
+            preparedStatement.setInt(1, id);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                log.info("Connection opened for find by title element task");
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(getSubtask(rs));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Optional<Subtask> findBySubtaskTitle(String title) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE_SUBTASK)) {
-            preparedStatement.setInt(1, id);
+            preparedStatement.setString(1, title);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 log.info("Connection opened for find by title element task");
                 if (!rs.next()) {
@@ -116,9 +132,26 @@ public class TaskJDBCRepository {
 
     public int insert(Task task) {
         try (Connection connection = openConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(INSERT)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(INSERT_TASK)) {
             log.info("Connection opened for insert task");
             bindTaskParams(preparedStatement, task);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("id");
+                } else {
+                    throw new SQLException("Creating failed, no ID obtained.");
+                }
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Incorrect data", e);
+        }
+    }
+
+    public int insertSubtask(Subtask task) {
+        try (Connection connection = openConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(INSERT_SUBTASK)) {
+            log.info("Connection opened for insert task");
+            bindSubtaskParams(preparedStatement, task);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt("id");
@@ -197,6 +230,7 @@ public class TaskJDBCRepository {
 
     private Subtask getSubtask(ResultSet rs) throws SQLException {
         Subtask obj = new Subtask();
+        obj.setId(rs.getInt(1));
         obj.setTask_id(rs.getInt(2));
         obj.setTitle(rs.getString(3));
         obj.setCompleted(rs.getBoolean(4));
@@ -213,6 +247,12 @@ public class TaskJDBCRepository {
         ps.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
         OffsetDateTime odt = task.getDate().atOffset(ZoneOffset.UTC);
         ps.setObject(4, odt);
+    }
+
+    private void bindSubtaskParams(PreparedStatement ps, Subtask task) throws SQLException {
+        ps.setInt(1, task.getTask_id());
+        ps.setString(2, task.getTitle());
+        ps.setBoolean(3, task.isCompleted());
     }
 
 

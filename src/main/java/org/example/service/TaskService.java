@@ -1,6 +1,7 @@
 package org.example.service;
 
 import com.zaxxer.hikari.HikariDataSource;
+import org.example.dto.SubtaskRequest;
 import org.example.dto.TaskRequest;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataExistsException;
@@ -41,7 +42,7 @@ public class TaskService {
 
     public Task create(TaskRequest createTask) {
         Task task = inizilizeTask(createTask);
-        Optional<Task> theSameTitleName = repo.findByTitle(task.getTitle());
+        Optional<Task> theSameTitleName = repo.findByTitleTask(task.getTitle());
 
         if (theSameTitleName.isPresent()) {
             throw new DataExistsException("This task is already created");
@@ -52,9 +53,22 @@ public class TaskService {
         return task;
     }
 
+    public Subtask createSubtask(SubtaskRequest createTask) {
+        Subtask task = inizilizeSubtask(createTask);
+        Optional<Subtask> theSameTitleName = repo.findBySubtaskTitle(task.getTitle());
+
+        if (theSameTitleName.isPresent()) {
+            throw new DataExistsException("This task is already created");
+        }
+
+        int id = repo.insertSubtask(task);
+        task.setId(id);
+        return task;
+    }
+
     public Task update(int id, TaskRequest taskUpdate) {
         Task task = inizilizeTask(taskUpdate);
-        Optional<Task> oldTask = repo.findById(id);
+        Optional<Task> oldTask = repo.findByIdTask(id);
         if (oldTask.isEmpty()) {
             throw new DataExistsException("Id " + id + " doesn't exist");
         }
@@ -75,8 +89,8 @@ public class TaskService {
         return task;
     }
 
-    public void delete(int id) {
-        Optional<Subtask> task = repo.findByTitleSubtask(id);
+    public void deleteTask(int id) {
+        Optional<Task> task = repo.findByIdTask(id);
         if (task.isPresent()) {
             throw new DataExistsException("This task includes subtasks. You can't delete it");
         } else {
@@ -84,6 +98,22 @@ public class TaskService {
         }
     }
 
+    public void deleteSubtask(int id) {
+        Optional<Subtask> task = repo.findByIdSubtask(id);
+        if (task.isPresent()) {
+            throw new DataExistsException("This task includes subtasks. You can't delete it");
+        } else {
+            repo.delete(id);
+        }
+    }
+
+    private Subtask inizilizeSubtask(SubtaskRequest createTask) {
+        Subtask task = new Subtask();
+        task.setTask_id(createTask.getTask_id());
+        task.setTitle(createTask.getTitle());
+        task.setCompleted(createTask.isCompleted());
+        return task;
+    }
 
     private Task inizilizeTask(TaskRequest createTask) {
         Task task = new Task();
