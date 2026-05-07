@@ -87,11 +87,11 @@ public class TaskServlet extends HttpServlet {
         } catch (DataExistsException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
-            resp.getWriter().write(e.getMessage());
+            mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
         } catch (ValidationException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write(e.getMessage());
+            mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
         } catch (JsonProcessingException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -122,11 +122,11 @@ public class TaskServlet extends HttpServlet {
         } catch (DataExistsException | InvalidStatusTransitionException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
-            resp.getWriter().write(e.getMessage());
+            mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
         } catch (ValidationException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write(e.getMessage());
+            mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
         }
     }
 

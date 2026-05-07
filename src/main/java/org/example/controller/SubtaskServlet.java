@@ -2,6 +2,8 @@ package org.example.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
@@ -14,17 +16,13 @@ import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
 import org.example.dto.SubtaskRequest;
 import org.example.dto.SubtaskResponse;
-import org.example.dto.TaskRequest;
 import org.example.exception.DataExistsException;
+import org.example.exception.InvalidStatusTransitionException;
 import org.example.model.Subtask;
-import org.example.model.Task;
 import org.example.service.TaskService;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @WebServlet("/subtasks")
 public class SubtaskServlet extends HttpServlet {
@@ -39,6 +37,8 @@ public class SubtaskServlet extends HttpServlet {
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         try {
             Object dsObj = getServletContext().getAttribute("datasource");
             Object valObj = getServletContext().getAttribute("validator");
@@ -54,7 +54,7 @@ public class SubtaskServlet extends HttpServlet {
     }
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         ArrayList<Subtask> data = task.findAllSubtask();
         setJsonHeaders(resp);
         if (data == null || data.isEmpty()) {
@@ -62,12 +62,13 @@ public class SubtaskServlet extends HttpServlet {
             mapper.writeValue(resp.getWriter(), new ArrayList<>());
             return;
         }
+        List<SubtaskResponse> sbResponse = data.stream().map(SubtaskResponse::new).toList();
         resp.setStatus(HttpServletResponse.SC_OK);
-        mapper.writeValue(resp.getWriter(), data);
+        mapper.writeValue(resp.getWriter(), sbResponse);
     }
 
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         try {
             SubtaskRequest subtaskReq = mapper.readValue(req.getInputStream(), SubtaskRequest.class);
             validateData(subtaskReq);
@@ -82,11 +83,11 @@ public class SubtaskServlet extends HttpServlet {
         } catch (DataExistsException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
-            resp.getWriter().write(e.getMessage());
+            mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
         } catch (ValidationException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write(e.getMessage());
+            mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
         } catch (JsonProcessingException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -100,12 +101,33 @@ public class SubtaskServlet extends HttpServlet {
     }
 
     @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        SubtaskRequest updateDate = mapper.readValue(req.getInputStream(), SubtaskRequest.class);
+        int idParam = Integer.parseInt(req.getParameter("id"));
+        if (idParam < 0) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter" + idParam);
+            return;
+        }
+        setJsonHeaders(resp);
+        try {
+            validateData(updateDate);
+            Subtask subtask = task.updateSubtask(idParam, updateDate);
+            SubtaskResponse taskDTO = new SubtaskResponse(subtask);
+            resp.setStatus(HttpServletResponse.SC_OK);
+            mapper.writeValue(resp.getWriter(), taskDTO);
+        } catch (DataExistsException | InvalidStatusTransitionException e) {
+            setJsonHeaders(resp);
+            resp.setStatus(HttpServletResponse.SC_CONFLICT);
+            mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
+        } catch (ValidationException e) {
+            setJsonHeaders(resp);
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
+        }
     }
 
     @Override
-    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         int idParam = Integer.parseInt(req.getParameter("id"));
         if (idParam < 0) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter" + idParam);
@@ -135,7 +157,6 @@ public class SubtaskServlet extends HttpServlet {
             }
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("errors", errors);
-            responseBody.put("test", "test"); // todo test!!!!
             throw new ValidationException(mapper.writeValueAsString(responseBody));
         }
     }

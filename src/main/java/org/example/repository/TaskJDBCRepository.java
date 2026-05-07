@@ -20,12 +20,13 @@ public class TaskJDBCRepository {
     private static final String SELECT_TASK = "SELECT * FROM tasks t ORDER BY t.id";
     private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks s ORDER BY s.id";
     private static final String SELECT_ID = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
-    private static final String SELECT_ID_SUBTASK = "SELECT * FROM subtasks s WHERE task_id = ? FOR UPDATE";
+    private static final String SELECT_ID_SUBTASK = "SELECT * FROM subtasks s WHERE id = ? FOR UPDATE";
     private static final String SELECT_TITLE = "SELECT * FROM tasks t WHERE title = ?";
     private static final String SELECT_TITLE_SUBTASK = "SELECT * FROM subtasks t WHERE title = ?";
     private static final String INSERT_TASK = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?) RETURNING id";
     private static final String INSERT_SUBTASK = "INSERT INTO subtasks (task_id, title, completed) VALUES (?,?,?) RETURNING id";
-    private static final String UPDATE = "UPDATE tasks SET title = ?, description= ?, status= ?, duedate= ? WHERE id = ?";
+    private static final String UPDATE_TASK = "UPDATE tasks SET title = ?, description= ?, status= ?, duedate= ? WHERE id = ?";
+    private static final String UPDATE_SUBTASK = "UPDATE subtasks SET task_id = ?, title = ?, completed= ? WHERE id = ?";
     private static final String DELETE_TASK = "DELETE FROM tasks WHERE id = ?";
     private static final String DELETE_SUBTASK = "DELETE FROM subtasks WHERE id = ?";
 
@@ -173,9 +174,48 @@ public class TaskJDBCRepository {
             connection.setAutoCommit(false);
             log.debug("Transaction started (autoCommit=false)");
 
-            try (PreparedStatement ps = connection.prepareStatement(UPDATE)) {
+            try (PreparedStatement ps = connection.prepareStatement(UPDATE_TASK)) {
                 bindTaskParams(ps, task);
                 ps.setInt(5, id);
+                int rows = ps.executeUpdate();
+                log.info("Update executed for id={}, affected rows={}", id, rows);
+                connection.commit();
+                log.debug("Transaction committed successfully");
+            }
+        } catch (SQLException e) {
+            if (connection != null) {
+                try {
+                    connection.rollback();
+                    log.warn("Transaction rolled back due to error: {}", e.getMessage());
+                } catch (SQLException ex) {
+                    log.error("Rollback failed: {}", ex.getMessage(), ex);
+                }
+            }
+            throw new DataAccessException("Update failed", e);
+        } finally {
+            if (connection != null) {
+                try {
+                    connection.setAutoCommit(true);
+                    connection.close();
+                    log.debug("Connection closed for update task id={}", id);
+                } catch (SQLException ex) {
+                    log.error("Failed to close connection: {}", ex.getMessage(), ex);
+                }
+            }
+        }
+    }
+
+    public void setUpdateSubtask(Subtask subtask, int id) {
+        Connection connection = null;
+        try {
+            connection = openConnection();
+            log.info("Connection opened for update task id={}", id);
+            connection.setAutoCommit(false);
+            log.debug("Transaction started (autoCommit=false)");
+
+            try (PreparedStatement ps = connection.prepareStatement(UPDATE_SUBTASK)) {
+                bindSubtaskParams(ps, subtask);
+                ps.setInt(4, id);
                 int rows = ps.executeUpdate();
                 log.info("Update executed for id={}, affected rows={}", id, rows);
                 connection.commit();
@@ -248,10 +288,9 @@ public class TaskJDBCRepository {
         obj.setTask_id(rs.getInt(2));
         obj.setTitle(rs.getString(3));
         obj.setCompleted(rs.getBoolean(4));
-        /*OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
+        OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
         Instant date = odt.toInstant();
-        obj.setDate(date);
-         */
+        obj.setCreated_at(date);
         return obj;
     }
 

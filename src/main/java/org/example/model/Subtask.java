@@ -3,6 +3,8 @@ package org.example.model;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
+
 @Getter
 @Setter
 public class Subtask {
@@ -10,4 +12,5 @@ public class Subtask {
     private int task_id;
     private String title;
     private boolean completed;
+    private Instant created_at;
 }

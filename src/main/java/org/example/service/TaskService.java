@@ -2,6 +2,7 @@ package org.example.service;
 
 import com.zaxxer.hikari.HikariDataSource;
 import org.example.dto.SubtaskRequest;
+import org.example.dto.SubtaskResponse;
 import org.example.dto.TaskRequest;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataExistsException;
@@ -85,6 +86,17 @@ public class TaskService {
         }
 
         repo.setUpdate(task, id);
+        task.setId(id);
+        return task;
+    }
+
+    public Subtask updateSubtask(int id, SubtaskRequest taskUpdate) {
+        Subtask task = inizilizeSubtask(taskUpdate);
+        Optional<Subtask> oldTask = repo.findByIdSubtask(id);
+        if (oldTask.isEmpty()) {
+            throw new DataExistsException("Id " + id + " doesn't exist");
+        }
+        repo.setUpdateSubtask(task, id);
         task.setId(id);
         return task;
     }
