@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataAccessException;
+import org.example.exception.DataExistsException;
 import org.example.model.Subtask;
 import org.example.model.Task;
 
@@ -12,6 +13,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.function.Consumer;
 
 @Slf4j
 public class TaskJDBCRepository {
@@ -87,7 +89,7 @@ public class TaskJDBCRepository {
     public Optional<Task> findByTitleTask(String title) {
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE)) {
-            preparedStatement.setString(2, title);
+            preparedStatement.setString(1, title);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 log.info("Connection opened for find by title element task");
                 if (!rs.next()) {
@@ -166,7 +168,7 @@ public class TaskJDBCRepository {
         }
     }
 
-    public void setUpdate(Task task, int id) {
+    private void executeUpdate(String sql, int id, Consumer<PreparedStatement> binder, int idParam) {
         Connection connection = null;
         try {
             connection = openConnection();
@@ -174,9 +176,9 @@ public class TaskJDBCRepository {
             connection.setAutoCommit(false);
             log.debug("Transaction started (autoCommit=false)");
 
-            try (PreparedStatement ps = connection.prepareStatement(UPDATE_TASK)) {
-                bindTaskParams(ps, task);
-                ps.setInt(5, id);
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                binder.accept(ps);
+                ps.setInt(idParam, id);
                 int rows = ps.executeUpdate();
                 log.info("Update executed for id={}, affected rows={}", id, rows);
                 connection.commit();
@@ -203,68 +205,32 @@ public class TaskJDBCRepository {
                 }
             }
         }
+    }
+
+
+    public void setUpdateTask(Task task, int id) {
+        executeUpdate(UPDATE_TASK, id, preparedStatement -> bindTaskParams(preparedStatement, task), 5);
     }
 
     public void setUpdateSubtask(Subtask subtask, int id) {
-        Connection connection = null;
-        try {
-            connection = openConnection();
-            log.info("Connection opened for update task id={}", id);
-            connection.setAutoCommit(false);
-            log.debug("Transaction started (autoCommit=false)");
-
-            try (PreparedStatement ps = connection.prepareStatement(UPDATE_SUBTASK)) {
-                bindSubtaskParams(ps, subtask);
-                ps.setInt(4, id);
-                int rows = ps.executeUpdate();
-                log.info("Update executed for id={}, affected rows={}", id, rows);
-                connection.commit();
-                log.debug("Transaction committed successfully");
-            }
-        } catch (SQLException e) {
-            if (connection != null) {
-                try {
-                    connection.rollback();
-                    log.warn("Transaction rolled back due to error: {}", e.getMessage());
-                } catch (SQLException ex) {
-                    log.error("Rollback failed: {}", ex.getMessage(), ex);
-                }
-            }
-            throw new DataAccessException("Update failed", e);
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.setAutoCommit(true);
-                    connection.close();
-                    log.debug("Connection closed for update task id={}", id);
-                } catch (SQLException ex) {
-                    log.error("Failed to close connection: {}", ex.getMessage(), ex);
-                }
-            }
-        }
+        executeUpdate(UPDATE_SUBTASK, id, preparedStatement -> bindSubtaskParams(preparedStatement, subtask), 4);
     }
 
-    public boolean deleteTask(int id) {
-        try (Connection connection = openConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(DELETE_TASK)) {
-            preparedStatement.setInt(1, id);
-            log.info("Connection opened for delete task id={}", id);
-            int rows = preparedStatement.executeUpdate();
-            log.info("Delete executed for id={}", id);
-            return rows != 0;
-        } catch (SQLException e) {
-            throw new DataAccessException("Element doesn't exist", e);
-        }
+    public void deleteTask(int id) {
+        deleteById(DELETE_TASK, id);
     }
 
-    public boolean deleteSubtask(int id) {
+    public void deleteSubtask(int id) {
+        deleteById(DELETE_SUBTASK, id);
+    }
+
+    private void deleteById(String query, int id) {
         try (Connection connection = openConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(DELETE_SUBTASK)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setInt(1, id);
             log.info("Connection opened for delete task id={}", id);
-            int rows = preparedStatement.executeUpdate();
+            preparedStatement.executeUpdate();
             log.info("Delete executed for id={}", id);
-            return rows != 0;
         } catch (SQLException e) {
             throw new DataAccessException("Element doesn't exist", e);
         }
@@ -294,18 +260,26 @@ public class TaskJDBCRepository {
         return obj;
     }
 
-    private void bindTaskParams(PreparedStatement ps, Task task) throws SQLException {
-        ps.setString(1, task.getTitle());
-        ps.setString(2, task.getDescription());
-        ps.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
-        OffsetDateTime odt = task.getDate().atOffset(ZoneOffset.UTC);
-        ps.setObject(4, odt);
+    private void bindTaskParams(PreparedStatement ps, Task task) {
+        try {
+            ps.setString(1, task.getTitle());
+            ps.setString(2, task.getDescription());
+            ps.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
+            OffsetDateTime odt = task.getDate().atOffset(ZoneOffset.UTC);
+            ps.setObject(4, odt);
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not bind parameters for Task", e);
+        }
     }
 
-    private void bindSubtaskParams(PreparedStatement ps, Subtask task) throws SQLException {
-        ps.setInt(1, task.getTask_id());
-        ps.setString(2, task.getTitle());
-        ps.setBoolean(3, task.isCompleted());
+    private void bindSubtaskParams(PreparedStatement ps, Subtask task) {
+        try {
+            ps.setInt(1, task.getTask_id());
+            ps.setString(2, task.getTitle());
+            ps.setBoolean(3, task.isCompleted());
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not bind parameters for Task", e);
+        }
     }
 
 

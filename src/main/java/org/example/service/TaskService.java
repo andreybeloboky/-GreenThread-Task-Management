@@ -2,7 +2,6 @@ package org.example.service;
 
 import com.zaxxer.hikari.HikariDataSource;
 import org.example.dto.SubtaskRequest;
-import org.example.dto.SubtaskResponse;
 import org.example.dto.TaskRequest;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataExistsException;
@@ -85,7 +84,7 @@ public class TaskService {
             throw new InvalidStatusTransitionException("Invalid status transition");
         }
 
-        repo.setUpdate(task, id);
+        repo.setUpdateTask(task, id);
         task.setId(id);
         return task;
     }
