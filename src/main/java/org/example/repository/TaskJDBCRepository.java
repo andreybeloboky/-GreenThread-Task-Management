@@ -49,7 +49,7 @@ public class TaskJDBCRepository {
     }
 
     public Optional<Subtask> findByTitleSubtask(String title) {
-        return find(SELECT_TITLE_TASK, title, this::getSubtask);
+        return find(SELECT_TITLE_SUBTASK, title, this::getSubtask);
     }
 
     public Optional<Task> findByIdTask(int id) {
