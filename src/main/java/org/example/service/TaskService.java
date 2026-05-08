@@ -48,14 +48,14 @@ public class TaskService {
             throw new DataExistsException("This task is already created");
         }
 
-        int id = repo.insert(task);
+        int id = repo.insertTask(task);
         task.setId(id);
         return task;
     }
 
     public Subtask createSubtask(SubtaskRequest createTask) {
         Subtask task = inizilizeSubtask(createTask);
-        Optional<Subtask> theSameTitleName = repo.findBySubtaskTitle(task.getTitle());
+        Optional<Subtask> theSameTitleName = repo.findByTitleSubtask(task.getTitle());
 
         if (theSameTitleName.isPresent()) {
             throw new DataExistsException("This task is already created");

@@ -4,7 +4,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataAccessException;
-import org.example.exception.DataExistsException;
 import org.example.model.Subtask;
 import org.example.model.Task;
 
@@ -14,6 +13,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 @Slf4j
 public class TaskJDBCRepository {
@@ -21,9 +21,9 @@ public class TaskJDBCRepository {
     private final HikariDataSource dataSource;
     private static final String SELECT_TASK = "SELECT * FROM tasks t ORDER BY t.id";
     private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks s ORDER BY s.id";
-    private static final String SELECT_ID = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
+    private static final String SELECT_ID_TASK = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
     private static final String SELECT_ID_SUBTASK = "SELECT * FROM subtasks s WHERE id = ? FOR UPDATE";
-    private static final String SELECT_TITLE = "SELECT * FROM tasks t WHERE title = ?";
+    private static final String SELECT_TITLE_TASK = "SELECT * FROM tasks t WHERE title = ?";
     private static final String SELECT_TITLE_SUBTASK = "SELECT * FROM subtasks t WHERE title = ?";
     private static final String INSERT_TASK = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?) RETURNING id";
     private static final String INSERT_SUBTASK = "INSERT INTO subtasks (task_id, title, completed) VALUES (?,?,?) RETURNING id";
@@ -37,30 +37,73 @@ public class TaskJDBCRepository {
     }
 
     public ArrayList<Task> getTasksList() {
-        ArrayList<Task> list = new ArrayList<>();
-        try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TASK);
-             ResultSet rs = preparedStatement.executeQuery()) {
-            log.info("Connection opened for take all elements task");
-            while (rs.next()) {
-                Task obj = getTask(rs);
-                list.add(obj);
-                log.info("Added an element to list");
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        return list;
+        return getTaskList(SELECT_TASK, this::getTask);
     }
 
     public ArrayList<Subtask> getSubtasksList() {
-        ArrayList<Subtask> list = new ArrayList<>();
+        return getTaskList(SELECT_SUBTASKS, this::getSubtask);
+    }
+
+    public Optional<Task> findByTitleTask(String title) {
+        return find(SELECT_TITLE_TASK, title, this::getTask);
+    }
+
+    public Optional<Subtask> findByTitleSubtask(String title) {
+        return find(SELECT_TITLE_TASK, title, this::getSubtask);
+    }
+
+    public Optional<Task> findByIdTask(int id) {
+        return find(SELECT_ID_TASK, id, this::getTask);
+    }
+
+    public Optional<Subtask> findByIdSubtask(int id) {
+        return find(SELECT_ID_SUBTASK, id, this::getSubtask);
+    }
+
+    public int insertTask(Task task) {
+        return executeInsert(INSERT_TASK, ps -> bindTaskParams(ps, task));
+    }
+
+    public int insertSubtask(Subtask subtask) {
+        return executeInsert(INSERT_SUBTASK, ps -> bindSubtaskParams(ps, subtask));
+    }
+
+    public void setUpdateTask(Task task, int id) {
+        executeUpdate(UPDATE_TASK, id, preparedStatement -> bindTaskParams(preparedStatement, task), 5);
+    }
+
+    public void setUpdateSubtask(Subtask subtask, int id) {
+        executeUpdate(UPDATE_SUBTASK, id, preparedStatement -> bindSubtaskParams(preparedStatement, subtask), 4);
+    }
+
+    public void deleteTask(int id) {
+        deleteById(DELETE_TASK, id);
+    }
+
+    public void deleteSubtask(int id) {
+        deleteById(DELETE_SUBTASK, id);
+    }
+
+    private void deleteById(String query, int id) {
+        try (Connection connection = openConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setInt(1, id);
+            log.info("Connection opened for delete task id={}", id);
+            preparedStatement.executeUpdate();
+            log.info("Delete executed for id={}", id);
+        } catch (SQLException e) {
+            throw new DataAccessException("Element doesn't exist", e);
+        }
+    }
+
+    private <T> ArrayList<T> getTaskList(String sql, Function<ResultSet, T> mapper) {
+        ArrayList<T> list = new ArrayList<>();
         try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_SUBTASKS);
+             PreparedStatement preparedStatement = conn.prepareStatement(sql);
              ResultSet rs = preparedStatement.executeQuery()) {
             log.info("Connection opened for take all elements task");
             while (rs.next()) {
-                Subtask obj = getSubtask(rs);
+                T obj = mapper.apply(rs);
                 list.add(obj);
                 log.info("Added an element to list");
             }
@@ -70,92 +113,27 @@ public class TaskJDBCRepository {
         return list;
     }
 
-    public Optional<Task> findByIdTask(int id) {
+    private <T> Optional<T> find(String sql, Object param, Function<ResultSet, T> mapper) {
         try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID)) {
-            preparedStatement.setInt(1, id);
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setObject(1, param);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 log.info("Connection opened for find by id element task");
                 if (!rs.next()) {
                     return Optional.empty();
                 }
-                return Optional.of(getTask(rs));
+                return Optional.of(mapper.apply(rs));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public Optional<Task> findByTitleTask(String title) {
-        try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE)) {
-            preparedStatement.setString(1, title);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                log.info("Connection opened for find by title element task");
-                if (!rs.next()) {
-                    return Optional.empty();
-                }
-                return Optional.of(getTask(rs));
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public Optional<Subtask> findByIdSubtask(int id) {
-        try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_ID_SUBTASK)) {
-            preparedStatement.setInt(1, id);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                log.info("Connection opened for find by title element task");
-                if (!rs.next()) {
-                    return Optional.empty();
-                }
-                return Optional.of(getSubtask(rs));
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public Optional<Subtask> findBySubtaskTitle(String title) {
-        try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_TITLE_SUBTASK)) {
-            preparedStatement.setString(1, title);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                log.info("Connection opened for find by title element task");
-                if (!rs.next()) {
-                    return Optional.empty();
-                }
-                return Optional.of(getSubtask(rs));
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public int insert(Task task) {
+    private int executeInsert(String sql, Consumer<PreparedStatement> binder) {
         try (Connection connection = openConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(INSERT_TASK)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             log.info("Connection opened for insert task");
-            bindTaskParams(preparedStatement, task);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("id");
-                } else {
-                    throw new SQLException("Creating failed, no ID obtained.");
-                }
-            }
-        } catch (SQLException e) {
-            throw new DataAccessException("Incorrect data", e);
-        }
-    }
-
-    public int insertSubtask(Subtask task) {
-        try (Connection connection = openConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(INSERT_SUBTASK)) {
-            log.info("Connection opened for insert task");
-            bindSubtaskParams(preparedStatement, task);
+            binder.accept(preparedStatement);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt("id");
@@ -207,57 +185,36 @@ public class TaskJDBCRepository {
         }
     }
 
-
-    public void setUpdateTask(Task task, int id) {
-        executeUpdate(UPDATE_TASK, id, preparedStatement -> bindTaskParams(preparedStatement, task), 5);
-    }
-
-    public void setUpdateSubtask(Subtask subtask, int id) {
-        executeUpdate(UPDATE_SUBTASK, id, preparedStatement -> bindSubtaskParams(preparedStatement, subtask), 4);
-    }
-
-    public void deleteTask(int id) {
-        deleteById(DELETE_TASK, id);
-    }
-
-    public void deleteSubtask(int id) {
-        deleteById(DELETE_SUBTASK, id);
-    }
-
-    private void deleteById(String query, int id) {
-        try (Connection connection = openConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setInt(1, id);
-            log.info("Connection opened for delete task id={}", id);
-            preparedStatement.executeUpdate();
-            log.info("Delete executed for id={}", id);
+    private Task getTask(ResultSet rs) {
+        try {
+            Task obj = new Task();
+            obj.setId(rs.getInt(1));
+            obj.setTitle(rs.getString(2));
+            obj.setDescription(rs.getString(3));
+            obj.setStatus(TaskStatus.valueOf(rs.getString(4)));
+            OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
+            Instant date = odt.toInstant();
+            obj.setDate(date);
+            return obj;
         } catch (SQLException e) {
-            throw new DataAccessException("Element doesn't exist", e);
+            throw new DataAccessException("Could not bind parameters for Task", e);
         }
     }
 
-    private Task getTask(ResultSet rs) throws SQLException {
-        Task obj = new Task();
-        obj.setId(rs.getInt(1));
-        obj.setTitle(rs.getString(2));
-        obj.setDescription(rs.getString(3));
-        obj.setStatus(TaskStatus.valueOf(rs.getString(4)));
-        OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
-        Instant date = odt.toInstant();
-        obj.setDate(date);
-        return obj;
-    }
-
-    private Subtask getSubtask(ResultSet rs) throws SQLException {
-        Subtask obj = new Subtask();
-        obj.setId(rs.getInt(1));
-        obj.setTask_id(rs.getInt(2));
-        obj.setTitle(rs.getString(3));
-        obj.setCompleted(rs.getBoolean(4));
-        OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
-        Instant date = odt.toInstant();
-        obj.setCreated_at(date);
-        return obj;
+    private Subtask getSubtask(ResultSet rs) {
+        try {
+            Subtask obj = new Subtask();
+            obj.setId(rs.getInt(1));
+            obj.setTask_id(rs.getInt(2));
+            obj.setTitle(rs.getString(3));
+            obj.setCompleted(rs.getBoolean(4));
+            OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
+            Instant date = odt.toInstant();
+            obj.setCreated_at(date);
+            return obj;
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not bind parameters for Task", e);
+        }
     }
 
     private void bindTaskParams(PreparedStatement ps, Task task) {
@@ -281,7 +238,6 @@ public class TaskJDBCRepository {
             throw new DataAccessException("Could not bind parameters for Task", e);
         }
     }
-
 
     private Connection openConnection() throws SQLException {
         try {
