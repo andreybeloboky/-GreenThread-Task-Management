@@ -102,13 +102,39 @@ public class SubtaskServlet extends HttpServlet {
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        SubtaskRequest updateDate = mapper.readValue(req.getInputStream(), SubtaskRequest.class);
-        int idParam = Integer.parseInt(req.getParameter("id"));
-        if (idParam < 0) {
-            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing id parameter" + idParam);
+        setJsonHeaders(resp);
+
+        String idParamStr = req.getParameter("id");
+        if (idParamStr == null || idParamStr.isBlank()) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            mapper.writeValue(resp.getWriter(), Map.of("error", "Missing id parameter"));
             return;
         }
-        setJsonHeaders(resp);
+
+        int idParam;
+        try {
+            idParam = Integer.parseInt(idParamStr);
+            if (idParam < 0) {
+                throw new NumberFormatException();
+            }
+        } catch (NumberFormatException e) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            mapper.writeValue(resp.getWriter(), Map.of("error", "Invalid id parameter"));
+            return;
+        }
+
+        SubtaskRequest updateDate;
+        try {
+            updateDate = mapper.readValue(req.getInputStream(), SubtaskRequest.class);
+        } catch (JsonProcessingException e) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            mapper.writeValue(resp.getWriter(), Map.of(
+                    "error", "Invalid JSON format",
+                    "details", e.getOriginalMessage()
+            ));
+            return;
+        }
+
         try {
             validateData(updateDate);
             Subtask subtask = task.updateSubtask(idParam, updateDate);
@@ -116,11 +142,9 @@ public class SubtaskServlet extends HttpServlet {
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), taskDTO);
         } catch (DataExistsException | InvalidStatusTransitionException e) {
-            setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
         } catch (ValidationException e) {
-            setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
         }

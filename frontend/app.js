@@ -1,18 +1,34 @@
-// Ensure this matches the context path where your Servlets are deployed
 const API_BASE_URL = 'http://localhost:8080/GreenThread-Task-Management';
 
-const taskForm = document.getElementById('taskForm');
-const subtaskForm = document.getElementById('subtaskForm');
-const taskList = document.getElementById('taskList');
+// Элементы представлений
+const loginView = document.getElementById('loginView');
+const dashboardView = document.getElementById('dashboardView');
 const connectionStatus = document.getElementById('connectionStatus');
+const logoutBtn = document.getElementById('logoutBtn');
+const errorAlert = document.getElementById('errorAlert');
+const errorAlertText = document.getElementById('errorAlertText');
 
-// Initialize view
+// Формы
+const loginForm = document.getElementById('loginForm');
+const taskForm = document.getElementById('taskForm');
+const editTaskForm = document.getElementById('editTaskForm');
+const subtaskForm = document.getElementById('subtaskForm');
+
+// Глобальное хранилище загруженных задач
+let tasksDataCache = [];
+
+// Модальные окна Bootstrap
+let editModalInstance = null;
+let subtaskModalInstance = null;
+
 document.addEventListener('DOMContentLoaded', () => {
+    editModalInstance = new bootstrap.Modal(document.getElementById('editTaskModal'));
+    subtaskModalInstance = new bootstrap.Modal(document.getElementById('subtaskModal'));
+
     setDefaultDate();
-    fetchData();
+    fetchData(); // Запрашиваем данные (проверяем сессию при старте)
 });
 
-// Sets a valid default future date in the datetime-local picker
 function setDefaultDate() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -22,15 +38,6 @@ function setDefaultDate() {
     document.getElementById('taskDate').value = localISO;
 }
 
-// Global utility for triggering user feedback toast messages
-function showToast(message) {
-    document.getElementById('toastMsg').innerText = message;
-    const toast = document.getElementById('toastBanner');
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 6000);
-}
-
-// Utility to enforce exact Jackson timezone matching pattern: yyyy-MM-dd'T'HH:mm:ss'Z'
 function formatToJacksonUTC(datetimeLocalStr) {
     const d = new Date(datetimeLocalStr);
     return d.getUTCFullYear() + '-' +
@@ -41,55 +48,143 @@ function formatToJacksonUTC(datetimeLocalStr) {
         String(d.getUTCSeconds()).padStart(2, '0') + 'Z';
 }
 
-// --- DATA INITIALIZATION ---
+function formatToDatetimeLocal(jacksonStr) {
+    if (!jacksonStr) return '';
+    const d = new Date(jacksonStr);
+    if (isNaN(d.getTime())) return '';
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+}
 
-// Safely loads tasks and subtasks from independent servlet mappings
-async function fetchData() {
+function showBackendError(responseStatus, errObj) {
+    let message = "Произошла ошибка при обработке запроса.";
+
+    if (errObj.error) {
+        try {
+            const nested = JSON.parse(errObj.error);
+            if (nested.errors) {
+                message = Object.entries(nested.errors)
+                    .map(([field, msg]) => `• ${msg}`)
+                    .join('<br>');
+            } else {
+                message = errObj.error;
+            }
+        } catch(e) {
+            if (errObj.error.includes("already created")) {
+                message = "Задача с таким названием уже существует! Выберите уникальное имя.";
+            } else if (errObj.error.includes("includes subtasks")) {
+                message = "Невозможно удалить задачу, содержащую активные подзадачи.";
+            } else {
+                message = errObj.error;
+            }
+        }
+    } else if (errObj.errors) {
+        message = Object.values(errObj.errors).join('<br>');
+    } else if (errObj.message) {
+        message = errObj.message;
+    }
+
+    errorAlertText.innerHTML = message;
+    errorAlert.classList.remove('d-none');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// --- АУТЕНТИФИКАЦИЯ ---
+
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorAlert.classList.add('d-none');
+
+    const credentials = {
+        username: document.getElementById('loginUser').value.trim(),
+        password: document.getElementById('loginPass').value.trim()
+    };
+
     try {
-        // Fetch Tasks and Subtasks simultaneously to handle decoupled serialization models safely
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(credentials)
+        });
+
+        if (response.ok) {
+            loginView.classList.add('d-none');
+            dashboardView.classList.remove('d-none');
+            logoutBtn.classList.remove('d-none');
+            fetchData();
+        } else {
+            const err = await response.json();
+            showBackendError(response.status, err);
+        }
+    } catch (error) {
+        errorAlertText.innerText = "Ошибка соединения с сервером авторизации.";
+        errorAlert.classList.remove('d-none');
+    }
+});
+
+function logout() {
+    loginView.classList.remove('d-none');
+    dashboardView.classList.add('d-none');
+    logoutBtn.classList.add('d-none');
+    connectionStatus.className = "badge bg-warning text-dark";
+    connectionStatus.innerText = "Требуется вход";
+}
+
+// --- ЗАГРУЗКА ДАННЫХ ---
+
+async function fetchData() {
+    errorAlert.classList.add('d-none');
+    try {
         const [tasksRes, subtasksRes] = await Promise.all([
             fetch(`${API_BASE_URL}/tasks`, { credentials: 'include' }),
             fetch(`${API_BASE_URL}/subtasks`, { credentials: 'include' })
         ]);
 
-        if (!tasksRes.ok) throw new Error(`Tasks failed: ${tasksRes.status}`);
+        // Корректно обрабатываем 401 статус переключением на форму входа
+        if (tasksRes.status === 401 || subtasksRes.status === 401) {
+            logout();
+            return;
+        }
 
-        connectionStatus.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
-        connectionStatus.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online';
+        if (!tasksRes.ok) throw new Error("Не удалось загрузить задачи");
+
+        connectionStatus.className = "badge bg-success";
+        connectionStatus.innerText = "Online";
+        loginView.classList.add('d-none');
+        dashboardView.classList.remove('d-none');
+        logoutBtn.classList.remove('d-none');
 
         const rawTasks = await tasksRes.json();
         const rawSubtasks = subtasksRes.ok ? await subtasksRes.json() : [];
 
-        // Consolidate subtask grouping safely via IDs
+        tasksDataCache = rawTasks;
+
         const subtaskMap = {};
         rawSubtasks.forEach(st => {
-            const parentId = st.taskId || st.task_id; // Map based on varying serializations
+            const parentId = st.taskId || st.task_id;
             if (!subtaskMap[parentId]) subtaskMap[parentId] = [];
             subtaskMap[parentId].push(st);
         });
 
         renderTasks(rawTasks, subtaskMap);
     } catch (error) {
-        console.error('Data Fetch Error:', error);
-        connectionStatus.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200";
-        connectionStatus.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Disconnected';
-        showToast('Unable to reach backend servlets. Check server connection.');
+        connectionStatus.className = "badge bg-danger";
+        connectionStatus.innerText = "Ошибка сети";
     }
 }
 
-// --- TASK MANAGEMENT (POST, PUT, DELETE) ---
+// --- СОЗДАНИЕ ЗАДАЧИ ---
 
 taskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
-    const titleInput = document.getElementById('taskTitle').value.trim();
-    const rawDate = document.getElementById('taskDate').value;
+    errorAlert.classList.add('d-none');
 
     const payload = {
         id: 0,
-        title: titleInput,
+        title: document.getElementById('taskTitle').value.trim(),
         description: document.getElementById('taskDescription').value.trim(),
-        date: formatToJacksonUTC(rawDate),
+        date: formatToJacksonUTC(document.getElementById('taskDate').value),
         status: document.getElementById('taskStatus').value
     };
 
@@ -107,36 +202,55 @@ taskForm.addEventListener('submit', async (e) => {
             fetchData();
         } else {
             const err = await response.json();
-            const errMsg = err.error || (err.errors ? JSON.stringify(err.errors) : "Validation failed");
-            showToast(`Task creation rejected: ${errMsg}`);
+            showBackendError(response.status, err);
         }
     } catch (error) {
-        showToast('Failed to post task over network.');
+        errorAlertText.innerText = "Не удалось отправить данные задачи.";
+        errorAlert.classList.remove('d-none');
     }
 });
 
-async function updateTaskStatus(taskId, currentStatus, newStatus) {
-    if (currentStatus === 'COMPLETED') {
-        showToast("Completed tasks cannot change status based on state business rules.");
-        return;
-    }
+// --- РЕДАКТИРОВАНИЕ ЗАДАЧИ ---
 
-    // Retrieve old state properties directly from DOM attributes to build payload cleanly
-    const card = document.getElementById(`task-card-${taskId}`);
-    const title = card.getAttribute('data-title');
-    const desc = card.getAttribute('data-desc');
-    const dateStr = card.getAttribute('data-date');
+function openEditModal(taskId) {
+    errorAlert.classList.add('d-none');
+    const task = tasksDataCache.find(t => t.id === taskId);
+    if (!task) return;
 
+    document.getElementById('editTaskId').value = task.id;
+    document.getElementById('editTaskTitle').value = task.title || '';
+    document.getElementById('editTaskDescription').value = task.description || '';
+    document.getElementById('editTaskDate').value = formatToDatetimeLocal(task.date);
+
+    const statusSelect = document.getElementById('editTaskStatus');
+    statusSelect.value = task.status || 'PENDING';
+
+    Array.from(statusSelect.options).forEach(option => {
+        option.disabled = false;
+        if (task.status === 'COMPLETED' && option.value !== 'COMPLETED') {
+            option.disabled = true;
+        } else if (task.status === 'PENDING' && option.value === 'COMPLETED') {
+            option.disabled = true;
+        }
+    });
+
+    editModalInstance.show();
+}
+
+editTaskForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorAlert.classList.add('d-none');
+
+    const taskId = parseInt(document.getElementById('editTaskId').value);
     const payload = {
         id: taskId,
-        title: title,
-        description: desc,
-        date: dateStr,
-        status: newStatus
+        title: document.getElementById('editTaskTitle').value.trim(),
+        description: document.getElementById('editTaskDescription').value.trim(),
+        date: formatToJacksonUTC(document.getElementById('editTaskDate').value),
+        status: document.getElementById('editTaskStatus').value
     };
 
     try {
-        // Critical: Passing ID strictly via query parameters (?id=) per your HttpServlet implementation
         const response = await fetch(`${API_BASE_URL}/tasks?id=${taskId}`, {
             method: 'PUT',
             credentials: 'include',
@@ -145,22 +259,26 @@ async function updateTaskStatus(taskId, currentStatus, newStatus) {
         });
 
         if (response.ok) {
+            editModalInstance.hide();
             fetchData();
         } else {
             const err = await response.json();
-            showToast(err.error || "Invalid status transition.");
-            fetchData(); // Rollback UI selector
+            editModalInstance.hide();
+            showBackendError(response.status, err);
         }
     } catch (error) {
-        showToast("Failed to communicate update request.");
+        errorAlertText.innerText = "Не удалось сохранить изменения.";
+        errorAlert.classList.remove('d-none');
     }
-}
+});
+
+// --- УДАЛЕНИЕ ЗАДАЧИ ---
 
 async function deleteTask(taskId) {
-    if (!confirm('Are you absolutely certain you want to permanently delete this task?')) return;
+    if (!confirm("Вы уверены, что хотите удалить эту задачу?")) return;
+    errorAlert.classList.add('d-none');
 
     try {
-        // Critical: Passing ID strictly via query parameters (?id=) per your HttpServlet implementation
         const response = await fetch(`${API_BASE_URL}/tasks?id=${taskId}`, {
             method: 'DELETE',
             credentials: 'include'
@@ -170,35 +288,31 @@ async function deleteTask(taskId) {
             fetchData();
         } else {
             const err = await response.json();
-            // Likely rejected due to existing subtasks constraint
-            showToast(err.error || "Cannot delete task containing subtasks.");
+            showBackendError(response.status, err);
         }
     } catch (error) {
-        showToast("Network execution failed during deletion.");
+        errorAlertText.innerText = "Ошибка при удалении задачи.";
+        errorAlert.classList.remove('d-none');
     }
 }
 
-// --- SUBTASK MANAGEMENT (POST, PUT, DELETE) ---
+// --- УПРАВЛЕНИЕ ПОДЗАДАЧАМИ ---
 
 function openSubtaskModal(taskId) {
+    errorAlert.classList.add('d-none');
     document.getElementById('parentTaskId').value = taskId;
     document.getElementById('subtaskTitle').value = '';
-    document.getElementById('subtaskModal').classList.remove('hidden');
-    document.getElementById('subtaskTitle').focus();
-}
-
-function closeSubtaskModal() {
-    document.getElementById('subtaskModal').classList.add('hidden');
+    subtaskModalInstance.show();
 }
 
 subtaskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const parentId = parseInt(document.getElementById('parentTaskId').value);
-    const titleVal = document.getElementById('subtaskTitle').value.trim();
+    errorAlert.classList.add('d-none');
 
+    const parentId = parseInt(document.getElementById('parentTaskId').value);
     const payload = {
         task_id: parentId,
-        title: titleVal,
+        title: document.getElementById('subtaskTitle').value.trim(),
         completed: false
     };
 
@@ -211,18 +325,21 @@ subtaskForm.addEventListener('submit', async (e) => {
         });
 
         if (response.ok) {
-            closeSubtaskModal();
+            subtaskModalInstance.hide();
             fetchData();
         } else {
             const err = await response.json();
-            showToast(err.error || "Failed to persist subtask.");
+            subtaskModalInstance.hide();
+            showBackendError(response.status, err);
         }
     } catch (error) {
-        showToast("Subtask assignment failed over connection.");
+        errorAlertText.innerText = "Не удалось добавить подзадачу.";
+        errorAlert.classList.remove('d-none');
     }
 });
 
 async function toggleSubtask(subtaskId, currentCompleted, title, parentId) {
+    errorAlert.classList.add('d-none');
     const payload = {
         task_id: parentId,
         title: title,
@@ -230,7 +347,6 @@ async function toggleSubtask(subtaskId, currentCompleted, title, parentId) {
     };
 
     try {
-        // Critical: Passing ID strictly via query parameters (?id=) per your HttpServlet implementation
         const response = await fetch(`${API_BASE_URL}/subtasks?id=${subtaskId}`, {
             method: 'PUT',
             credentials: 'include',
@@ -242,17 +358,18 @@ async function toggleSubtask(subtaskId, currentCompleted, title, parentId) {
             fetchData();
         } else {
             const err = await response.json();
-            showToast(err.error || "Unable to update subtask record.");
-            fetchData(); // Rollback checkbox visual state
+            showBackendError(response.status, err);
+            fetchData();
         }
     } catch (error) {
-        showToast("Execution aborted while updating subtask.");
+        errorAlertText.innerText = "Ошибка обновления статуса подзадачи.";
+        errorAlert.classList.remove('d-none');
     }
 }
 
 async function deleteSubtask(subtaskId) {
+    errorAlert.classList.add('d-none');
     try {
-        // Critical: Passing ID strictly via query parameters (?id=) per your HttpServlet implementation
         const response = await fetch(`${API_BASE_URL}/subtasks?id=${subtaskId}`, {
             method: 'DELETE',
             credentials: 'include'
@@ -262,131 +379,145 @@ async function deleteSubtask(subtaskId) {
             fetchData();
         } else {
             const err = await response.json();
-            showToast(err.error || "Could not delete subtask.");
+            showBackendError(response.status, err);
         }
     } catch (error) {
-        showToast("Network execution failed during deletion.");
+        errorAlertText.innerText = "Ошибка при удалении подзадачи.";
+        errorAlert.classList.remove('d-none');
     }
 }
 
-// --- DYNAMIC RENDERING ---
+// --- ОТРИСОВКА ИНТЕРФЕЙСА ---
 
 function renderTasks(tasks, subtaskMap) {
+    const taskList = document.getElementById('taskList');
     taskList.innerHTML = '';
 
     if (!tasks || tasks.length === 0) {
-        taskList.innerHTML = `
-            <div class="bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-500">
-                <p class="text-sm">No tasks tracked currently. Create one using the form on the left.</p>
-            </div>`;
+        taskList.innerHTML = `<div class="alert alert-secondary text-center">Список задач пуст. Создайте новую задачу.</div>`;
         return;
     }
 
-    tasks.forEach(task => {
-        // Handle varying possible fields from backend object mappings safely
-        const title = task.title || 'Untitled';
+    tasks.forEach((task, index) => {
+        const title = task.title || 'Без названия';
         const desc = task.description || '';
         const status = task.status || 'PENDING';
 
-        // Ensure date formatting parses reliably
-        let displayDate = 'No Due Date';
-        let rawDateJackson = '';
+        let displayDate = 'Нет даты';
         if (task.date) {
-            rawDateJackson = task.date;
             const d = new Date(task.date);
-            displayDate = isNaN(d.getTime()) ? task.date : d.toLocaleString(undefined, {
-                month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
-            });
+            displayDate = isNaN(d.getTime()) ? task.date : d.toLocaleString();
         }
 
-        // Use internal array OR the dynamically grouped map
         const subtasks = (task.subtasks && task.subtasks.length > 0) ? task.subtasks : (subtaskMap[task.id] || []);
 
-        const cardColor = getStatusTheme(status);
+        let badgeClass = 'bg-secondary';
+        if (status === 'COMPLETED') badgeClass = 'bg-success';
+        if (status === 'IN_PROGRESS') badgeClass = 'bg-warning text-dark';
 
-        const card = document.createElement('div');
-        card.className = `bg-white rounded-xl border-l-4 ${cardColor.border} border-y border-r border-slate-200 p-5 shadow-sm transition hover:shadow-md`;
-        card.id = `task-card-${task.id}`;
+                const subtasksHtml = subtasks.map(st => `
+                    <li class="list-group-item d-flex justify-content-between align-items-center bg-light p-2">
+                        <div class="form-check mb-0 flex-grow-1">
+                            <input class="form-check-input" type="checkbox" id="st-${st.id}" ${st.completed ? 'checked' : ''}
+                                   onchange="toggleSubtask(${st.id}, ${st.completed}, '${st.title.replace(/'/g, "\\'")}', ${task.id})">
+                            <label class="form-check-label ${st.completed ? 'text-decoration-line-through text-muted' : ''}" for="st-${st.id}">
+                                ${st.title}
+                            </label>
+                        </div>
+                        <div class="btn-group">
+                            <button onclick="editSubtaskTitle(${st.id}, '${st.title.replace(/'/g, "\\'")}', ${st.completed}, ${task.id})"
+                                    class="btn btn-sm btn-link text-primary p-0 me-2" title="Редактировать">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path>
+                                </svg>
+                            </button>
+                            <button onclick="deleteSubtask(${st.id})" class="btn btn-sm btn-link text-danger p-0" title="Удалить">&times;</button>
+                        </div>
+                    </li>
+                `).join('');
 
-        // Cache object properties directly into the element to simplify state reconstruction
-        card.setAttribute('data-title', title);
-        card.setAttribute('data-desc', desc);
-        card.setAttribute('data-date', rawDateJackson);
+        const accordionId = `collapseTask${task.id}`;
 
-        // Build status selector dynamically obeying valid transition matrices
-        let statusOptionsHtml = '';
-        const states = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
-        states.forEach(st => {
-            const isSelected = (status === st) ? 'selected' : '';
-            // Business rule: COMPLETED states generally lock down changes
-            const isDisabled = (status === 'COMPLETED' && st !== 'COMPLETED') ? 'disabled' : '';
-            statusOptionsHtml += `<option value="${st}" ${isSelected} ${isDisabled}>${st}</option>`;
-        });
-
-        // Generate nested subtask lists securely
-        const subtasksHtml = subtasks.map(st => `
-            <div class="flex items-center justify-between text-xs bg-slate-50 border border-slate-100 p-2.5 rounded-lg group">
-                <label class="flex items-center gap-2 cursor-pointer flex-1 truncate mr-2">
-                    <input type="checkbox" ${st.completed ? 'checked' : ''}
-                           onchange="toggleSubtask(${st.id}, ${st.completed}, '${st.title.replace(/'/g, "\\'")}', ${task.id})"
-                           class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer mt-0.5">
-                    <span class="truncate font-medium ${st.completed ? 'line-through text-slate-400 font-normal' : 'text-slate-700'}">
-                        ${st.title}
-                    </span>
-                </label>
-                <button onclick="deleteSubtask(${st.id})" class="text-slate-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition p-1" title="Delete subtask">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                </button>
-            </div>
-        `).join('');
-
-        card.innerHTML = `
-            <div class="flex justify-between items-start gap-4 mb-3">
-                <div class="flex-1 truncate">
-                    <h3 class="font-bold text-slate-900 text-base truncate" title="${title}">${title}</h3>
-                    ${desc ? `<p class="text-slate-600 text-xs mt-1 break-words line-clamp-2">${desc}</p>` : ''}
-                    <div class="flex items-center gap-1.5 text-xs text-slate-400 mt-2 font-mono">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        <span>${displayDate}</span>
+        const item = document.createElement('div');
+        item.className = 'accordion-item mb-2 border rounded';
+        item.innerHTML = `
+            <h2 class="accordion-header" id="heading${task.id}">
+                <button class="accordion-button ${index !== 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#${accordionId}">
+                    <div class="d-flex justify-content-between items-center w-100 me-3">
+                        <span class="font-weight-bold">${title}</span>
+                        <div>
+                            <span class="badge ${badgeClass} me-2">${status}</span>
+                            <span class="badge bg-light text-dark border"><small>${displayDate}</small></span>
+                        </div>
                     </div>
-                </div>
+                </button>
+            </h2>
 
-                <div class="flex items-center gap-2 shrink-0">
-                    <select onchange="updateTaskStatus(${task.id}, '${status}', this.value)"
-                            class="text-xs font-semibold px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 ${cardColor.badgeText} focus:outline-none focus:ring-1 focus:ring-slate-300">
-                        ${statusOptionsHtml}
-                    </select>
+            <div id="${accordionId}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" data-bs-parent="#taskList">
+                <div class="accordion-body">
+                    ${desc ? `<p class="mb-3 text-muted">${desc}</p>` : ''}
 
-                    <button onclick="deleteTask(${task.id})" class="text-slate-400 hover:text-rose-600 transition p-1.5 rounded-lg hover:bg-rose-50" title="Delete Task">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
-                </div>
-            </div>
+                    <div class="d-flex gap-2 mb-3">
+                        <button onclick="openEditModal(${task.id})" class="btn btn-primary btn-sm">Редактировать задачу</button>
+                        <button onclick="deleteTask(${task.id})" class="btn btn-danger btn-sm">Удалить задачу</button>
+                        <button onclick="openSubtaskModal(${task.id})" class="btn btn-success btn-sm ms-auto">+ Добавить подзадачу</button>
+                    </div>
 
-            <div class="mt-4 pt-4 border-t border-slate-100">
-                <div class="flex justify-between items-center mb-2.5">
-                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Subtasks (${subtasks.length})</span>
-                    <button onclick="openSubtaskModal(${task.id})" class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded-md transition">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        Add
-                    </button>
-                </div>
-
-                <div class="space-y-1.5">
-                    ${subtasksHtml || `<p class="text-xs text-slate-400 italic py-1">No subtasks recorded.</p>`}
+                    <h6 class="text-muted mt-2">Подзадачи (${subtasks.length}):</h6>
+                    <ul class="list-group list-group-flush border rounded">
+                        ${subtasksHtml || `<li class="list-group-item text-muted text-center"><small>Нет прикрепленных подзадач</small></li>`}
+                    </ul>
                 </div>
             </div>
         `;
-
-        taskList.appendChild(card);
+        taskList.appendChild(item);
     });
 }
+/**
+ * Редактирование названия подзадачи
+ */
+async function editSubtaskTitle(subtaskId, currentTitle, isCompleted, parentId) {
+    // Запрашиваем новое название
+    const newTitle = prompt("Введите новое название подзадачи (минимум 5 символов):", currentTitle);
 
-// Maps appropriate theme decorations based on exact backend state strings
-function getStatusTheme(status) {
-    switch(status) {
-        case 'COMPLETED':   return { border: 'border-emerald-500', badgeText: 'text-emerald-700' };
-        case 'IN_PROGRESS': return { border: 'border-amber-500',   badgeText: 'text-amber-700' };
-        default:            return { border: 'border-sky-500',     badgeText: 'text-sky-700' };
+    // Если отмена или название не изменилось
+    if (newTitle === null || newTitle.trim() === currentTitle) return;
+
+    const cleanedTitle = newTitle.trim();
+
+    // Проверка валидации (аналогично TaskRequest)
+    if (cleanedTitle.length < 5) {
+        showToast("Ошибка: Название должно содержать минимум 5 символов.");
+        return;
+    }
+
+    const payload = {
+        task_id: parentId,
+        title: cleanedTitle,
+        completed: isCompleted
+    };
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/subtasks?id=${subtaskId}`, {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            showToast("Подзадача обновлена!", true);
+            fetchData(); // Перерисовываем список
+        } else {
+            const text = await response.text();
+            try {
+                const err = JSON.parse(text);
+                showToast(`Ошибка: ${err.error || "Не удалось обновить подзадачу"}`);
+            } catch (e) {
+                showToast("Ошибка сервера при редактировании подзадачи.");
+            }
+        }
+    } catch (error) {
+        showToast("Сетевая ошибка при обновлении подзадачи.");
     }
 }

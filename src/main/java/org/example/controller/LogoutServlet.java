@@ -1,4 +1,4 @@
-package org.example.dto;
+package org.example.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.annotation.WebServlet;

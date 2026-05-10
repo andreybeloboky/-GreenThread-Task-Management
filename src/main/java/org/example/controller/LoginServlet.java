@@ -2,24 +2,35 @@ package org.example.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import org.example.dto.LoginRequest;
 import org.example.dto.LoginResponse;
 import org.example.exception.ErrorResponse;
-
 import java.io.IOException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
-@WebServlet("/login")
+
 public class LoginServlet extends HttpServlet {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        LoginRequest login = mapper.readValue(req.getInputStream(), LoginRequest.class);
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
 
-        if (!login.username.equals("admin") || !login.password.equals("123")) {
+        LoginRequest login;
+        try {
+            login = mapper.readValue(req.getInputStream(), LoginRequest.class);
+        } catch (JsonProcessingException e) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            mapper.writeValue(resp.getWriter(), new ErrorResponse("Malformed or missing JSON login payload"));
+            return;
+        }
+
+        if (login == null || login.username == null || login.password == null ||
+                !login.username.equals("admin") || !login.password.equals("123")) {
+
             resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             mapper.writeValue(resp.getWriter(), new ErrorResponse("Invalid credentials"));
             return;
@@ -35,7 +46,7 @@ public class LoginServlet extends HttpServlet {
         cookie.setAttribute("SameSite", "Lax");
         resp.addCookie(cookie);
 
-        resp.setContentType("application/json");
+        resp.setStatus(HttpServletResponse.SC_OK);
         mapper.writeValue(resp.getWriter(), new LoginResponse("ok"));
     }
 }
