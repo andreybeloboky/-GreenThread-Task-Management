@@ -1,6 +1,5 @@
 const API_BASE_URL = 'http://localhost:8080/GreenThread-Task-Management';
 
-// Элементы представлений
 const loginView = document.getElementById('loginView');
 const dashboardView = document.getElementById('dashboardView');
 const connectionStatus = document.getElementById('connectionStatus');
@@ -8,16 +7,13 @@ const logoutBtn = document.getElementById('logoutBtn');
 const errorAlert = document.getElementById('errorAlert');
 const errorAlertText = document.getElementById('errorAlertText');
 
-// Формы
 const loginForm = document.getElementById('loginForm');
 const taskForm = document.getElementById('taskForm');
 const editTaskForm = document.getElementById('editTaskForm');
 const subtaskForm = document.getElementById('subtaskForm');
 
-// Глобальное хранилище загруженных задач
 let tasksDataCache = [];
 
-// Модальные окна Bootstrap
 let editModalInstance = null;
 let subtaskModalInstance = null;
 
@@ -26,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     subtaskModalInstance = new bootstrap.Modal(document.getElementById('subtaskModal'));
 
     setDefaultDate();
-    fetchData(); // Запрашиваем данные (проверяем сессию при старте)
+    fetchData();
 });
 
 function setDefaultDate() {
@@ -71,9 +67,9 @@ function showBackendError(responseStatus, errObj) {
             }
         } catch(e) {
             if (errObj.error.includes("already created")) {
-                message = "Задача с таким названием уже существует! Выберите уникальное имя.";
+                message = "A task with that name already exists! Choose a unique name.";
             } else if (errObj.error.includes("includes subtasks")) {
-                message = "Невозможно удалить задачу, содержащую активные подзадачи.";
+                message = "An issue containing active subtasks cannot be deleted.";
             } else {
                 message = errObj.error;
             }
@@ -118,7 +114,7 @@ loginForm.addEventListener('submit', async (e) => {
             showBackendError(response.status, err);
         }
     } catch (error) {
-        errorAlertText.innerText = "Ошибка соединения с сервером авторизации.";
+        errorAlertText.innerText = "Error connecting to the authorization server.";
         errorAlert.classList.remove('d-none');
     }
 });
@@ -128,7 +124,7 @@ function logout() {
     dashboardView.classList.add('d-none');
     logoutBtn.classList.add('d-none');
     connectionStatus.className = "badge bg-warning text-dark";
-    connectionStatus.innerText = "Требуется вход";
+    connectionStatus.innerText = "Entrance is required";
 }
 
 // --- ЗАГРУЗКА ДАННЫХ ---
@@ -147,7 +143,7 @@ async function fetchData() {
             return;
         }
 
-        if (!tasksRes.ok) throw new Error("Не удалось загрузить задачи");
+        if (!tasksRes.ok) throw new Error("Failed to load tasks");
 
         connectionStatus.className = "badge bg-success";
         connectionStatus.innerText = "Online";
@@ -170,11 +166,9 @@ async function fetchData() {
         renderTasks(rawTasks, subtaskMap);
     } catch (error) {
         connectionStatus.className = "badge bg-danger";
-        connectionStatus.innerText = "Ошибка сети";
+        connectionStatus.innerText = "Network error";
     }
 }
-
-// --- СОЗДАНИЕ ЗАДАЧИ ---
 
 taskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -205,12 +199,10 @@ taskForm.addEventListener('submit', async (e) => {
             showBackendError(response.status, err);
         }
     } catch (error) {
-        errorAlertText.innerText = "Не удалось отправить данные задачи.";
+        errorAlertText.innerText = "The issue data could not be sent.";
         errorAlert.classList.remove('d-none');
     }
 });
-
-// --- РЕДАКТИРОВАНИЕ ЗАДАЧИ ---
 
 function openEditModal(taskId) {
     errorAlert.classList.add('d-none');
@@ -267,15 +259,13 @@ editTaskForm.addEventListener('submit', async (e) => {
             showBackendError(response.status, err);
         }
     } catch (error) {
-        errorAlertText.innerText = "Не удалось сохранить изменения.";
+        errorAlertText.innerText = "Couldn't save the changes.";
         errorAlert.classList.remove('d-none');
     }
 });
 
-// --- УДАЛЕНИЕ ЗАДАЧИ ---
-
 async function deleteTask(taskId) {
-    if (!confirm("Вы уверены, что хотите удалить эту задачу?")) return;
+    if (!confirm("Are you sure you want to delete this task?")) return;
     errorAlert.classList.add('d-none');
 
     try {
@@ -291,12 +281,10 @@ async function deleteTask(taskId) {
             showBackendError(response.status, err);
         }
     } catch (error) {
-        errorAlertText.innerText = "Ошибка при удалении задачи.";
+        errorAlertText.innerText = "An error occurred when deleting an issue.";
         errorAlert.classList.remove('d-none');
     }
 }
-
-// --- УПРАВЛЕНИЕ ПОДЗАДАЧАМИ ---
 
 function openSubtaskModal(taskId) {
     errorAlert.classList.add('d-none');
@@ -333,7 +321,7 @@ subtaskForm.addEventListener('submit', async (e) => {
             showBackendError(response.status, err);
         }
     } catch (error) {
-        errorAlertText.innerText = "Не удалось добавить подзадачу.";
+        errorAlertText.innerText = "Couldn't add a subtask.";
         errorAlert.classList.remove('d-none');
     }
 });
@@ -362,7 +350,7 @@ async function toggleSubtask(subtaskId, currentCompleted, title, parentId) {
             fetchData();
         }
     } catch (error) {
-        errorAlertText.innerText = "Ошибка обновления статуса подзадачи.";
+        errorAlertText.innerText = "Error updating the status of a subtask.";
         errorAlert.classList.remove('d-none');
     }
 }
@@ -382,28 +370,26 @@ async function deleteSubtask(subtaskId) {
             showBackendError(response.status, err);
         }
     } catch (error) {
-        errorAlertText.innerText = "Ошибка при удалении подзадачи.";
+        errorAlertText.innerText = "Error when deleting a subtask.";
         errorAlert.classList.remove('d-none');
     }
 }
-
-// --- ОТРИСОВКА ИНТЕРФЕЙСА ---
 
 function renderTasks(tasks, subtaskMap) {
     const taskList = document.getElementById('taskList');
     taskList.innerHTML = '';
 
     if (!tasks || tasks.length === 0) {
-        taskList.innerHTML = `<div class="alert alert-secondary text-center">Список задач пуст. Создайте новую задачу.</div>`;
+        taskList.innerHTML = `<div class="alert alert-secondary text-center">The task list is empty. Create a new task.</div>`;
         return;
     }
 
     tasks.forEach((task, index) => {
-        const title = task.title || 'Без названия';
+        const title = task.title || 'Untitled';
         const desc = task.description || '';
         const status = task.status || 'PENDING';
 
-        let displayDate = 'Нет даты';
+        let displayDate = 'There is no date';
         if (task.date) {
             const d = new Date(task.date);
             displayDate = isNaN(d.getTime()) ? task.date : d.toLocaleString();
@@ -426,12 +412,12 @@ function renderTasks(tasks, subtaskMap) {
                         </div>
                         <div class="btn-group">
                             <button onclick="editSubtaskTitle(${st.id}, '${st.title.replace(/'/g, "\\'")}', ${st.completed}, ${task.id})"
-                                    class="btn btn-sm btn-link text-primary p-0 me-2" title="Редактировать">
+                                    class="btn btn-sm btn-link text-primary p-0 me-2" title="Edit">
                                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path>
                                 </svg>
                             </button>
-                            <button onclick="deleteSubtask(${st.id})" class="btn btn-sm btn-link text-danger p-0" title="Удалить">&times;</button>
+                            <button onclick="deleteSubtask(${st.id})" class="btn btn-sm btn-link text-danger p-0" title="Delete">&times;</button>
                         </div>
                     </li>
                 `).join('');
@@ -458,14 +444,14 @@ function renderTasks(tasks, subtaskMap) {
                     ${desc ? `<p class="mb-3 text-muted">${desc}</p>` : ''}
 
                     <div class="d-flex gap-2 mb-3">
-                        <button onclick="openEditModal(${task.id})" class="btn btn-primary btn-sm">Редактировать задачу</button>
-                        <button onclick="deleteTask(${task.id})" class="btn btn-danger btn-sm">Удалить задачу</button>
-                        <button onclick="openSubtaskModal(${task.id})" class="btn btn-success btn-sm ms-auto">+ Добавить подзадачу</button>
+                        <button onclick="openEditModal(${task.id})" class="btn btn-primary btn-sm">Edit task</button>
+                        <button onclick="deleteTask(${task.id})" class="btn btn-danger btn-sm">Delete task</button>
+                        <button onclick="openSubtaskModal(${task.id})" class="btn btn-success btn-sm ms-auto">+ Add subtask</button>
                     </div>
 
-                    <h6 class="text-muted mt-2">Подзадачи (${subtasks.length}):</h6>
+                    <h6 class="text-muted mt-2">Subtasks (${subtasks.length}):</h6>
                     <ul class="list-group list-group-flush border rounded">
-                        ${subtasksHtml || `<li class="list-group-item text-muted text-center"><small>Нет прикрепленных подзадач</small></li>`}
+                        ${subtasksHtml || `<li class="list-group-item text-muted text-center"><small>There are no attached subtasks</small></li>`}
                     </ul>
                 </div>
             </div>
@@ -473,21 +459,24 @@ function renderTasks(tasks, subtaskMap) {
         taskList.appendChild(item);
     });
 }
-/**
- * Редактирование названия подзадачи
- */
-async function editSubtaskTitle(subtaskId, currentTitle, isCompleted, parentId) {
-    // Запрашиваем новое название
-    const newTitle = prompt("Введите новое название подзадачи (минимум 5 символов):", currentTitle);
 
-    // Если отмена или название не изменилось
+async function editSubtaskTitle(subtaskId, currentTitle, isCompleted, parentId) {
+    // Скрываем старые ошибки перед новым действием
+    errorAlert.classList.add('d-none');
+
+    // Запрашиваем новое название
+    const newTitle = prompt("Enter a new subtask name (minimum 5 characters):", currentTitle);
+
+    // Если нажали «Отмена» или название не изменилось — ничего не делаем
     if (newTitle === null || newTitle.trim() === currentTitle) return;
 
     const cleanedTitle = newTitle.trim();
 
-    // Проверка валидации (аналогично TaskRequest)
+    // Проверка длины строки (выводим ошибку в алерт Bootstrap)
     if (cleanedTitle.length < 5) {
-        showToast("Ошибка: Название должно содержать минимум 5 символов.");
+        errorAlertText.innerText = "Error: The name of the subtask must contain at least 5 characters.";
+        errorAlert.classList.remove('d-none');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
     }
 
@@ -506,18 +495,16 @@ async function editSubtaskTitle(subtaskId, currentTitle, isCompleted, parentId) 
         });
 
         if (response.ok) {
-            showToast("Подзадача обновлена!", true);
-            fetchData(); // Перерисовываем список
+            // Если всё успешно, просто обновляем список (новое имя появится мгновенно)
+            fetchData();
         } else {
-            const text = await response.text();
-            try {
-                const err = JSON.parse(text);
-                showToast(`Ошибка: ${err.error || "Не удалось обновить подзадачу"}`);
-            } catch (e) {
-                showToast("Ошибка сервера при редактировании подзадачи.");
-            }
+            // Если бэкенд вернул ошибку валидации (400/409), передаем её штатному обработчику
+            const err = await response.json();
+            showBackendError(response.status, err);
         }
     } catch (error) {
-        showToast("Сетевая ошибка при обновлении подзадачи.");
+        errorAlertText.innerText = "Network error when trying to update a subtask.";
+        errorAlert.classList.remove('d-none');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }

@@ -15,7 +15,7 @@ public class LoginServlet extends HttpServlet {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
 
@@ -29,7 +29,7 @@ public class LoginServlet extends HttpServlet {
         }
 
         if (login == null || login.username == null || login.password == null ||
-                !login.username.equals("admin") || !login.password.equals("123")) {
+                !login.username.equals("Andrew") || !login.password.equals("123")) {
 
             resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             mapper.writeValue(resp.getWriter(), new ErrorResponse("Invalid credentials"));

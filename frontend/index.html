@@ -12,15 +12,15 @@
     <div class="container">
         <span class="navbar-brand mb-0 h1">GreenThread Tasks</span>
         <div class="d-flex items-center">
-            <span id="connectionStatus" class="badge bg-warning text-dark">Подключение...</span>
-            <button id="logoutBtn" onclick="logout()" class="btn btn-outline-light btn-sm ms-3 d-none">Выйти</button>
+            <span id="connectionStatus" class="badge bg-warning text-dark">Connection...</span>
+            <button id="logoutBtn" onclick="logout()" class="btn btn-outline-light btn-sm ms-3 d-none">Exit</button>
         </div>
     </div>
 </nav>
 
 <div class="container">
     <div id="errorAlert" class="alert alert-danger alert-dismissible fade show d-none" role="alert">
-        <strong id="errorAlertTitle">Ошибка!</strong> <span id="errorAlertText"></span>
+        <strong id="errorAlertTitle">Error!</strong> <span id="errorAlertText"></span>
         <button type="button" class="btn-close" onclick="document.getElementById('errorAlert').classList.add('d-none')"></button>
     </div>
 </div>
@@ -30,19 +30,19 @@
         <div class="col-md-5">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white font-weight-bold">
-                    Вход в систему
+                    Log in to the system
                 </div>
                 <div class="card-body p-4">
                     <form id="loginForm">
                         <div class="mb-3">
-                            <label for="loginUser" class="form-label">Имя пользователя</label>
+                            <label for="loginUser" class="form-label">Username</label>
                             <input type="text" class="form-control" id="loginUser" value="admin" required>
                         </div>
                         <div class="mb-3">
-                            <label for="loginPass" class="form-label">Пароль</label>
+                            <label for="loginPass" class="form-label">Password</label>
                             <input type="password" class="form-control" id="loginPass" value="123" required>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Войти</button>
+                        <button type="submit" class="btn btn-primary w-100">Exit</button>
                     </form>
                 </div>
             </div>
@@ -56,31 +56,31 @@
         <div class="col-lg-4 mb-4">
             <div class="card shadow-sm sticky-top" style="top: 20px;">
                 <div class="card-header bg-success text-white">
-                    Создать новую задачу
+                    Create a new task
                 </div>
                 <div class="card-body">
                     <form id="taskForm">
                         <div class="mb-3">
-                            <label for="taskTitle" class="form-label">Название (мин. 5 символов) *</label>
-                            <input type="text" class="form-control" id="taskTitle" minlength="5" maxlength="100" required placeholder="Например, Подготовить отчет">
+                            <label for="taskTitle" class="form-label">Name (min. 5 characters) *</label>
+                            <input type="text" class="form-control" id="taskTitle" minlength="5" maxlength="100" required placeholder="For example, To Prepare a report">
                         </div>
                         <div class="mb-3">
-                            <label for="taskDescription" class="form-label">Описание</label>
-                            <textarea class="form-control" id="taskDescription" rows="3" maxlength="500"></textarea>
+                            <label for="taskDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="taskDescription" rows="3" maxlength="500" required placeholder="Optional"></textarea>
                         </div>
                         <div class="mb-3">
-                            <label for="taskDate" class="form-label">Срок выполнения (Будущее) *</label>
+                            <label for="taskDate" class="form-label">Due Date (Future) *</label>
                             <input type="datetime-local" class="form-control" id="taskDate" required>
                         </div>
                         <div class="mb-3">
-                            <label for="taskStatus" class="form-label">Статус</label>
+                            <label for="taskStatus" class="form-label">Status</label>
                             <select class="form-select" id="taskStatus">
                                 <option value="PENDING">PENDING</option>
                                 <option value="IN_PROGRESS">IN_PROGRESS</option>
                                 <option value="COMPLETED">COMPLETED</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-success w-100">Добавить задачу</button>
+                        <button type="submit" class="btn btn-success w-100">Add task</button>
                     </form>
                 </div>
             </div>
@@ -88,8 +88,8 @@
 
         <div class="col-lg-8">
             <div class="d-flex justify-content-between items-center mb-3">
-                <h3>Актуальные задачи</h3>
-                <button onclick="fetchData()" class="btn btn-outline-secondary btn-sm">Обновить данные</button>
+                <h3>Actual task</h3>
+                <button onclick="fetchData()" class="btn btn-outline-secondary btn-sm">Update data</button>
             </div>
             <div id="taskList" class="accordion shadow-sm">
             </div>
@@ -101,37 +101,37 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Редактировать задачу</h5>
+                <h5 class="modal-title">Edit task</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editTaskForm">
                 <div class="modal-body">
                     <input type="hidden" id="editTaskId">
                     <div class="mb-3">
-                        <label for="editTaskTitle" class="form-label">Название *</label>
+                        <label for="editTaskTitle" class="form-label">Name *</label>
                         <input type="text" class="form-control" id="editTaskTitle" minlength="5" maxlength="100" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editTaskDescription" class="form-label">Описание</label>
+                        <label for="editTaskDescription" class="form-label">Description</label>
                         <textarea class="form-control" id="editTaskDescription" rows="3" maxlength="500"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="editTaskDate" class="form-label">Срок выполнения *</label>
+                        <label for="editTaskDate" class="form-label">Period of execution *</label>
                         <input type="datetime-local" class="form-control" id="editTaskDate" required>
                     </div>
                     <div class="mb-3">
-                        <label for="editTaskStatus" class="form-label">Статус (Соблюдение конечного автомата)</label>
+                        <label for="editTaskStatus" class="form-label">Status (Compliance with the state machine)</label>
                         <select class="form-select" id="editTaskStatus">
                             <option value="PENDING">PENDING</option>
                             <option value="IN_PROGRESS">IN_PROGRESS</option>
                             <option value="COMPLETED">COMPLETED</option>
                         </select>
-                        <div class="form-text text-muted">Правила: PENDING ➔ IN_PROGRESS ➔ COMPLETED. Завершенные задачи блокируются.</div>
+                        <div class="form-text text-muted">Rules: PENDING ➔ IN_PROGRESS ➔ COMPLETED. Completed tasks are blocked.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
                 </div>
             </form>
         </div>
@@ -142,20 +142,20 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Добавить подзадачу</h5>
+                <h5 class="modal-title">Add a subtask</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="subtaskForm">
                 <div class="modal-body">
                     <input type="hidden" id="parentTaskId">
                     <div class="mb-3">
-                        <label for="subtaskTitle" class="form-label">Название подзадачи (мин. 5 символов) *</label>
+                        <label for="subtaskTitle" class="form-label">Subtask name (min. 5 characters) *</label>
                         <input type="text" class="form-control" id="subtaskTitle" minlength="5" maxlength="100" required placeholder="Проверить пункт 1">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-success">Создать</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Create</button>
                 </div>
             </form>
         </div>

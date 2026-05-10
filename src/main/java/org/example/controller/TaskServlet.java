@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -56,7 +57,9 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        ArrayList<Task> data = task.findAllTask();
+        String user = (String) req.getSession().getAttribute("user");
+
+        ArrayList<Task> data = task.findAllTask(user);
         setJsonHeaders(resp);
         if (data == null || data.isEmpty()) {
             resp.setStatus(HttpServletResponse.SC_OK);

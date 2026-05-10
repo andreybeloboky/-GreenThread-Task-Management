@@ -24,8 +24,8 @@ public class TaskService {
         this.repo = new TaskJDBCRepository(ds);
     }
 
-    public ArrayList<Task> findAllTask() {
-        ArrayList<Task> tasks = repo.getTasksList();
+    public ArrayList<Task> findAllTask(String user) {
+        ArrayList<Task> tasks = repo.getTasksList(user);
         ArrayList<Subtask> subtasks = repo.getSubtasksList();
         for (Task task : tasks) {
             List<Subtask> related = subtasks.stream()

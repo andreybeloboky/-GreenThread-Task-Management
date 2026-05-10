@@ -19,7 +19,7 @@ import java.util.function.Function;
 public class TaskJDBCRepository {
 
     private final HikariDataSource dataSource;
-    private static final String SELECT_TASK = "SELECT * FROM tasks t ORDER BY t.id";
+    private static final String SELECT_TASK = "SELECT * FROM tasks t WHERE t.username = ? order by t.id";
     private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks s ORDER BY s.id";
     private static final String SELECT_ID_TASK = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
     private static final String SELECT_ID_SUBTASK = "SELECT * FROM subtasks s WHERE id = ? FOR UPDATE";
@@ -36,9 +36,31 @@ public class TaskJDBCRepository {
         this.dataSource = dataSource;
     }
 
-    public ArrayList<Task> getTasksList() {
-        return getTaskList(SELECT_TASK, this::getTask);
+    public ArrayList<Task> getTasksList(String user) {
+        return getTaskList1(SELECT_TASK, this::getTask, user);
     }
+
+    private <T> ArrayList<T> getTaskList1(String sql, Function<ResultSet, T> mapper, String user) {
+        ArrayList<T> list = new ArrayList<>();
+        try (Connection conn = openConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+
+            preparedStatement.setString(1, user);
+
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                log.info("Connection opened for take all elements task");
+                while (rs.next()) {
+                    T obj = mapper.apply(rs);
+                    list.add(obj);
+                    log.info("Added an element to list");
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return list;
+    }
+
 
     public ArrayList<Subtask> getSubtasksList() {
         return getTaskList(SELECT_SUBTASKS, this::getSubtask);
