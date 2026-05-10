@@ -1,14 +1,13 @@
 package org.example.filter;
 
 import jakarta.servlet.*;
-import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.example.initialize.ResponseWrapper;
 
 import java.io.IOException;
 
 @Slf4j
-@WebFilter("/*")
 public class MetadataAuditFilter implements Filter {
 
     @Override

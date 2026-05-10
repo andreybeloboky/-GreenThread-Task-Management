@@ -1,4 +1,4 @@
-package org.example.filter;
+package org.example.initialize;
 
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.WriteListener;
