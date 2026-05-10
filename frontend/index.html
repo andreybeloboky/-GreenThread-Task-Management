@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 md:p-8">
+
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">Task manager</h1>
+
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+        <h2 class="text-xl font-semibold mb-4">Create a new task</h2>
+        <form id="taskForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="text" id="taskTitle" placeholder="Task name" required class="border p-2 rounded">
+            <input type="datetime-local" id="taskDate" required class="border p-2 rounded">
+            <textarea id="taskDescription" placeholder="Description" class="border p-2 rounded md:col-span-2"></textarea>
+            <select id="taskStatus" class="border p-2 rounded">
+                <option value="NEW">NEW</option>
+                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                <option value="COMPLETED">COMPLETED</option>
+            </select>
+            <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">Add task</button>
+        </form>
+    </div>
+
+    <div id="taskList" class="space-y-4">
+    </div>
+</div>
+
+<div id="subtaskModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-lg w-full max-w-md">
+        <h2 class="text-xl font-bold mb-4">Add subtask</h2>
+        <form id="subtaskForm" class="space-y-4">
+            <input type="hidden" id="parentTaskId">
+            <input type="text" id="subtaskTitle" placeholder="Subtask title" required class="border w-full p-2 rounded">
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeSubtaskModal()" class="px-4 py-2 text-gray-600">Decline</button>
+                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
