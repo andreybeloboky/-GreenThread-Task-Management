@@ -137,7 +137,6 @@ async function fetchData() {
             fetch(`${API_BASE_URL}/subtasks`, { credentials: 'include' })
         ]);
 
-        // Корректно обрабатываем 401 статус переключением на форму входа
         if (tasksRes.status === 401 || subtasksRes.status === 401) {
             logout();
             return;
@@ -170,10 +169,13 @@ async function fetchData() {
     }
 }
 
+// --- СОЗДАНИЕ ЗАДАЧИ ---
+
 taskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorAlert.classList.add('d-none');
 
+    // Чистый payload без поля username_id
     const payload = {
         id: 0,
         title: document.getElementById('taskTitle').value.trim(),
@@ -229,11 +231,15 @@ function openEditModal(taskId) {
     editModalInstance.show();
 }
 
+// --- РЕДАКТИРОВАНИЕ ЗАДАЧИ ---
+
 editTaskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorAlert.classList.add('d-none');
 
     const taskId = parseInt(document.getElementById('editTaskId').value);
+
+    // Чистый payload без поля username_id
     const payload = {
         id: taskId,
         title: document.getElementById('editTaskTitle').value.trim(),
@@ -401,26 +407,26 @@ function renderTasks(tasks, subtaskMap) {
         if (status === 'COMPLETED') badgeClass = 'bg-success';
         if (status === 'IN_PROGRESS') badgeClass = 'bg-warning text-dark';
 
-                const subtasksHtml = subtasks.map(st => `
-                    <li class="list-group-item d-flex justify-content-between align-items-center bg-light p-2">
-                        <div class="form-check mb-0 flex-grow-1">
-                            <input class="form-check-input" type="checkbox" id="st-${st.id}" ${st.completed ? 'checked' : ''}
-                                   onchange="toggleSubtask(${st.id}, ${st.completed}, '${st.title.replace(/'/g, "\\'")}', ${task.id})">
-                            <label class="form-check-label ${st.completed ? 'text-decoration-line-through text-muted' : ''}" for="st-${st.id}">
-                                ${st.title}
-                            </label>
-                        </div>
-                        <div class="btn-group">
-                            <button onclick="editSubtaskTitle(${st.id}, '${st.title.replace(/'/g, "\\'")}', ${st.completed}, ${task.id})"
-                                    class="btn btn-sm btn-link text-primary p-0 me-2" title="Edit">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path>
-                                </svg>
-                            </button>
-                            <button onclick="deleteSubtask(${st.id})" class="btn btn-sm btn-link text-danger p-0" title="Delete">&times;</button>
-                        </div>
-                    </li>
-                `).join('');
+        const subtasksHtml = subtasks.map(st => `
+            <li class="list-group-item d-flex justify-content-between align-items-center bg-light p-2">
+                <div class="form-check mb-0 flex-grow-1">
+                    <input class="form-check-input" type="checkbox" id="st-${st.id}" ${st.completed ? 'checked' : ''}
+                           onchange="toggleSubtask(${st.id}, ${st.completed}, '${st.title.replace(/'/g, "\\'")}', ${task.id})">
+                    <label class="form-check-label ${st.completed ? 'text-decoration-line-through text-muted' : ''}" for="st-${st.id}">
+                        ${st.title}
+                    </label>
+                </div>
+                <div class="btn-group">
+                    <button onclick="editSubtaskTitle(${st.id}, '${st.title.replace(/'/g, "\\'")}', ${st.completed}, ${task.id})"
+                            class="btn btn-sm btn-link text-primary p-0 me-2" title="Edit">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path>
+                        </svg>
+                    </button>
+                    <button onclick="deleteSubtask(${st.id})" class="btn btn-sm btn-link text-danger p-0" title="Delete">&times;</button>
+                </div>
+            </li>
+        `).join('');
 
         const accordionId = `collapseTask${task.id}`;
 
@@ -461,20 +467,16 @@ function renderTasks(tasks, subtaskMap) {
 }
 
 async function editSubtaskTitle(subtaskId, currentTitle, isCompleted, parentId) {
-    // Скрываем старые ошибки перед новым действием
     errorAlert.classList.add('d-none');
 
-    // Запрашиваем новое название
-    const newTitle = prompt("Enter a new subtask name (minimum 5 characters):", currentTitle);
+    const newTitle = prompt("Введите новое название подзадачи (минимум 5 символов):", currentTitle);
 
-    // Если нажали «Отмена» или название не изменилось — ничего не делаем
     if (newTitle === null || newTitle.trim() === currentTitle) return;
 
     const cleanedTitle = newTitle.trim();
 
-    // Проверка длины строки (выводим ошибку в алерт Bootstrap)
     if (cleanedTitle.length < 5) {
-        errorAlertText.innerText = "Error: The name of the subtask must contain at least 5 characters.";
+        errorAlertText.innerText = "Ошибка: Название подзадачи должно содержать минимум 5 символов.";
         errorAlert.classList.remove('d-none');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
@@ -495,15 +497,13 @@ async function editSubtaskTitle(subtaskId, currentTitle, isCompleted, parentId) 
         });
 
         if (response.ok) {
-            // Если всё успешно, просто обновляем список (новое имя появится мгновенно)
             fetchData();
         } else {
-            // Если бэкенд вернул ошибку валидации (400/409), передаем её штатному обработчику
             const err = await response.json();
             showBackendError(response.status, err);
         }
     } catch (error) {
-        errorAlertText.innerText = "Network error when trying to update a subtask.";
+        errorAlertText.innerText = "Сетевая ошибка при попытке обновить подзадачу.";
         errorAlert.classList.remove('d-none');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }

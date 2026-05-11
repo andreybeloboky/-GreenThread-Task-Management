@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.ServletConfig;
-import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -31,7 +30,6 @@ public class TaskServlet extends HttpServlet {
     private TaskService task;
     private final ObjectMapper mapper = new ObjectMapper();
     private Validator val;
-    private HikariDataSource ds;
     public static final String CONTENT_TYPE_JSON = "application/json";
     public static final String ENCODING_UTF8 = "UTF-8";
 
@@ -43,11 +41,9 @@ public class TaskServlet extends HttpServlet {
         try {
             Object dsObj = getServletContext().getAttribute("datasource");
             Object valObj = getServletContext().getAttribute("validator");
-            if (!(dsObj instanceof HikariDataSource) || !(valObj instanceof Validator)) {
+            if (!(dsObj instanceof HikariDataSource ds) || !(valObj instanceof Validator)) {
                 throw new ServletException("Required context attributes 'datasource' or 'validator' are missing or invalid");
             }
-
-            ds = (HikariDataSource) dsObj;
             val = (Validator) valObj;
             task = new TaskService(ds);
         } catch (Exception e) {
@@ -79,7 +75,8 @@ public class TaskServlet extends HttpServlet {
         try {
             TaskRequest createTask = mapper.readValue(req.getInputStream(), TaskRequest.class);
             validateData(createTask);
-            Task create = task.create(createTask);
+            String user = (String) req.getSession().getAttribute("user");
+            Task create = task.create(createTask, user);
             TaskResponse taskResponse = new TaskResponse(create);
 
             resp.setStatus(HttpServletResponse.SC_CREATED);
@@ -110,7 +107,7 @@ public class TaskServlet extends HttpServlet {
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         setJsonHeaders(resp);
-
+        String user = (String) req.getSession().getAttribute("user");
         String idParamStr = req.getParameter("id");
         if (idParamStr == null || idParamStr.isBlank()) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -144,7 +141,7 @@ public class TaskServlet extends HttpServlet {
 
         try {
             validateData(updateDate);
-            Task updateData = task.update(idParam, updateDate);
+            Task updateData = task.update(idParam, updateDate, user);
             TaskResponse taskDTO = new TaskResponse(updateData);
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), taskDTO);

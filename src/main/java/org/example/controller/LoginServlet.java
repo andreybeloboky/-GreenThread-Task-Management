@@ -1,18 +1,37 @@
 package org.example.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zaxxer.hikari.HikariDataSource;
+import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
 import org.example.dto.LoginRequest;
 import org.example.dto.LoginResponse;
 import org.example.exception.ErrorResponse;
+
 import java.io.IOException;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.example.service.TaskService;
 
 
 public class LoginServlet extends HttpServlet {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = new ObjectMapper();
+    private TaskService service;
+
+    @Override
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config);
+        try {
+            Object dsObj = getServletContext().getAttribute("datasource");
+            HikariDataSource ds = (HikariDataSource) dsObj;
+            service = new TaskService(ds);
+        } catch (Exception e) {
+            throw new ServletException("Failed to initialize the library", e);
+        }
+
+    }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -27,10 +46,17 @@ public class LoginServlet extends HttpServlet {
             mapper.writeValue(resp.getWriter(), new ErrorResponse("Malformed or missing JSON login payload"));
             return;
         }
+        boolean register;
+        try {
+            register = service.isRegister(login);
+        }catch (RuntimeException e){
+            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            mapper.writeValue(resp.getWriter(), e.getMessage());
+            return;
+        }
 
-        if (login == null || login.username == null || login.password == null ||
-                !login.username.equals("Andrew") || !login.password.equals("123")) {
 
+        if (!register) {
             resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             mapper.writeValue(resp.getWriter(), new ErrorResponse("Invalid credentials"));
             return;

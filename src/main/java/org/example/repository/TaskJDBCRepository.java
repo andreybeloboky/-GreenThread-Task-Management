@@ -4,6 +4,8 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataAccessException;
+import org.example.exception.DataExistsException;
+import org.example.model.Login;
 import org.example.model.Subtask;
 import org.example.model.Task;
 
@@ -19,34 +21,33 @@ import java.util.function.Function;
 public class TaskJDBCRepository {
 
     private final HikariDataSource dataSource;
-    private static final String SELECT_TASK = "SELECT * FROM tasks t WHERE t.username = ? order by t.id";
-    private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks s ORDER BY s.id";
+    private static final String SELECT_TASK = "SELECT * FROM tasks t WHERE t.username_id = ? order by t.id";
+    private static final String SELECT_SUBTASKS = "SELECT * FROM TASKS t JOIN subtasks s ON t.id = s.task_id";
     private static final String SELECT_ID_TASK = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
     private static final String SELECT_ID_SUBTASK = "SELECT * FROM subtasks s WHERE id = ? FOR UPDATE";
     private static final String SELECT_TITLE_TASK = "SELECT * FROM tasks t WHERE title = ?";
     private static final String SELECT_TITLE_SUBTASK = "SELECT * FROM subtasks t WHERE title = ?";
-    private static final String INSERT_TASK = "INSERT INTO tasks (title, description, status, duedate) VALUES (?,?,?,?) RETURNING id";
+    private static final String INSERT_TASK = "INSERT INTO tasks (title, description, status, duedate, username_id) VALUES (?,?,?,?,?) RETURNING id";
     private static final String INSERT_SUBTASK = "INSERT INTO subtasks (task_id, title, completed) VALUES (?,?,?) RETURNING id";
     private static final String UPDATE_TASK = "UPDATE tasks SET title = ?, description= ?, status= ?, duedate= ? WHERE id = ?";
     private static final String UPDATE_SUBTASK = "UPDATE subtasks SET task_id = ?, title = ?, completed= ? WHERE id = ?";
     private static final String DELETE_TASK = "DELETE FROM tasks WHERE id = ?";
     private static final String DELETE_SUBTASK = "DELETE FROM subtasks WHERE id = ?";
+    private static final String SELECT_USERNAME = "SELECT * FROM users WHERE username =?";
 
     public TaskJDBCRepository(HikariDataSource dataSource) {
         this.dataSource = dataSource;
     }
 
-    public ArrayList<Task> getTasksList(String user) {
+    public ArrayList<Task> getTasksList(Login user) {
         return getTaskList1(SELECT_TASK, this::getTask, user);
     }
 
-    private <T> ArrayList<T> getTaskList1(String sql, Function<ResultSet, T> mapper, String user) {
+    private <T> ArrayList<T> getTaskList1(String sql, Function<ResultSet, T> mapper, Login user) {
         ArrayList<T> list = new ArrayList<>();
         try (Connection conn = openConnection();
              PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-
-            preparedStatement.setString(1, user);
-
+            preparedStatement.setInt(1, user.getId());
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 log.info("Connection opened for take all elements task");
                 while (rs.next()) {
@@ -61,6 +62,58 @@ public class TaskJDBCRepository {
         return list;
     }
 
+    private <T> ArrayList<T> getTaskList(String sql, Function<ResultSet, T> mapper) {
+        ArrayList<T> list = new ArrayList<>();
+        try (Connection conn = openConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(sql);
+             ResultSet rs = preparedStatement.executeQuery()) {
+            log.info("Connection opened for take all elements task");
+            while (rs.next()) {
+                T obj = mapper.apply(rs);
+                list.add(obj);
+                log.info("Added an element to list");
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return list;
+    }
+
+    public Login initializeUser(String username) {
+        try (Connection conn = openConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_USERNAME)) {
+            preparedStatement.setString(1, username);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (!rs.next()) {
+                    throw new DataExistsException("Empty");
+                }
+                Login user = new Login();
+                user.setId(rs.getInt(1));
+                user.setLogin(rs.getString(2));
+                user.setPassword(rs.getString(3));
+                return user;
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Invalid connection", e);
+        }
+    }
+
+    public boolean verify(String username, String password) {
+        try (Connection conn = openConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_USERNAME)) {
+            preparedStatement.setString(1, username);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (!rs.next()) {
+                    return false;
+                }
+                String usernameBD = rs.getString(2);
+                String passwordBD = rs.getString(3);
+                return usernameBD.equals(username) && passwordBD.equals(password);
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Invalid connection", e);
+        }
+    }
 
     public ArrayList<Subtask> getSubtasksList() {
         return getTaskList(SELECT_SUBTASKS, this::getSubtask);
@@ -116,23 +169,6 @@ public class TaskJDBCRepository {
         } catch (SQLException e) {
             throw new DataAccessException("Element doesn't exist", e);
         }
-    }
-
-    private <T> ArrayList<T> getTaskList(String sql, Function<ResultSet, T> mapper) {
-        ArrayList<T> list = new ArrayList<>();
-        try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(sql);
-             ResultSet rs = preparedStatement.executeQuery()) {
-            log.info("Connection opened for take all elements task");
-            while (rs.next()) {
-                T obj = mapper.apply(rs);
-                list.add(obj);
-                log.info("Added an element to list");
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        return list;
     }
 
     private <T> Optional<T> find(String sql, Object param, Function<ResultSet, T> mapper) {
@@ -226,11 +262,11 @@ public class TaskJDBCRepository {
     private Subtask getSubtask(ResultSet rs) {
         try {
             Subtask obj = new Subtask();
-            obj.setId(rs.getInt(1));
-            obj.setTask_id(rs.getInt(2));
-            obj.setTitle(rs.getString(3));
-            obj.setCompleted(rs.getBoolean(4));
-            OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
+            obj.setId(rs.getInt(7));
+            obj.setTask_id(rs.getInt(8));
+            obj.setTitle(rs.getString(9));
+            obj.setCompleted(rs.getBoolean(10));
+            OffsetDateTime odt = rs.getObject(11, OffsetDateTime.class);
             Instant date = odt.toInstant();
             obj.setCreated_at(date);
             return obj;
@@ -246,6 +282,7 @@ public class TaskJDBCRepository {
             ps.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
             OffsetDateTime odt = task.getDate().atOffset(ZoneOffset.UTC);
             ps.setObject(4, odt);
+            ps.setInt(5, task.getUsername_id());
         } catch (SQLException e) {
             throw new DataAccessException("Could not bind parameters for Task", e);
         }

@@ -1,11 +1,13 @@
 package org.example.service;
 
 import com.zaxxer.hikari.HikariDataSource;
+import org.example.dto.LoginRequest;
 import org.example.dto.SubtaskRequest;
 import org.example.dto.TaskRequest;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataExistsException;
 import org.example.exception.InvalidStatusTransitionException;
+import org.example.model.Login;
 import org.example.model.Subtask;
 import org.example.model.Task;
 import org.example.repository.TaskJDBCRepository;
@@ -24,7 +26,8 @@ public class TaskService {
         this.repo = new TaskJDBCRepository(ds);
     }
 
-    public ArrayList<Task> findAllTask(String user) {
+    public ArrayList<Task> findAllTask(String username) {
+        Login user = repo.initializeUser(username);
         ArrayList<Task> tasks = repo.getTasksList(user);
         ArrayList<Subtask> subtasks = repo.getSubtasksList();
         for (Task task : tasks) {
@@ -40,8 +43,9 @@ public class TaskService {
         return repo.getSubtasksList();
     }
 
-    public Task create(TaskRequest createTask) {
-        Task task = inizilizeTask(createTask);
+    public Task create(TaskRequest createTask, String username) {
+        Login user = repo.initializeUser(username);
+        Task task = inizilizeTask(createTask, user);
         Optional<Task> theSameTitleName = repo.findByTitleTask(task.getTitle());
 
         if (theSameTitleName.isPresent()) {
@@ -66,8 +70,9 @@ public class TaskService {
         return task;
     }
 
-    public Task update(int id, TaskRequest taskUpdate) {
-        Task task = inizilizeTask(taskUpdate);
+    public Task update(int id, TaskRequest taskUpdate, String username) {
+        Login user = repo.initializeUser(username);
+        Task task = inizilizeTask(taskUpdate, user);
         Optional<Task> oldTask = repo.findByIdTask(id);
         if (oldTask.isEmpty()) {
             throw new DataExistsException("Id " + id + " doesn't exist");
@@ -122,6 +127,10 @@ public class TaskService {
         }
     }
 
+    public boolean isRegister(LoginRequest loginRequest) {
+        return repo.verify(loginRequest.getUsername(), loginRequest.getPassword());
+    }
+
     private Subtask inizilizeSubtask(SubtaskRequest createTask) {
         Subtask task = new Subtask();
         task.setTask_id(createTask.getTask_id());
@@ -130,13 +139,14 @@ public class TaskService {
         return task;
     }
 
-    private Task inizilizeTask(TaskRequest createTask) {
+    private Task inizilizeTask(TaskRequest createTask, Login user) {
         Task task = new Task();
         task.setId(createTask.getId());
         task.setTitle(createTask.getTitle());
         task.setDescription(createTask.getDescription());
         task.setDate(createTask.getDate());
         task.setStatus(createTask.getStatus());
+        task.setUsername_id(user.getId());
         return task;
     }
 }
