@@ -12,6 +12,7 @@ import org.example.exception.ErrorResponse;
 import java.io.IOException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.example.model.Login;
 import org.example.service.TaskService;
 
 
@@ -46,24 +47,24 @@ public class LoginServlet extends HttpServlet {
             mapper.writeValue(resp.getWriter(), new ErrorResponse("Malformed or missing JSON login payload"));
             return;
         }
-        boolean register;
+        Login register;
         try {
             register = service.isRegister(login);
-        }catch (RuntimeException e){
+        } catch (RuntimeException e) {
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
             mapper.writeValue(resp.getWriter(), e.getMessage());
             return;
         }
 
-
-        if (!register) {
+        if (register.getLogin() == null) {
             resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             mapper.writeValue(resp.getWriter(), new ErrorResponse("Invalid credentials"));
             return;
         }
 
         HttpSession session = req.getSession(true);
-        session.setAttribute("user", login.username);
+        session.setAttribute("user", register.getLogin());
+        session.setAttribute("id", register.getId());
 
         Cookie cookie = new Cookie("JSESSIONID", session.getId());
         cookie.setHttpOnly(true);

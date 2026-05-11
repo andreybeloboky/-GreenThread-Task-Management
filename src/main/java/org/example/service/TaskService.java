@@ -26,9 +26,8 @@ public class TaskService {
         this.repo = new TaskJDBCRepository(ds);
     }
 
-    public ArrayList<Task> findAllTask(String username) {
-        Login user = repo.initializeUser(username);
-        ArrayList<Task> tasks = repo.getTasksList(user);
+    public ArrayList<Task> findAllTask(int userId) {
+        ArrayList<Task> tasks = repo.getTasksList(userId);
         ArrayList<Subtask> subtasks = repo.getSubtasksList();
         for (Task task : tasks) {
             List<Subtask> related = subtasks.stream()
@@ -43,9 +42,8 @@ public class TaskService {
         return repo.getSubtasksList();
     }
 
-    public Task create(TaskRequest createTask, String username) {
-        Login user = repo.initializeUser(username);
-        Task task = inizilizeTask(createTask, user);
+    public Task create(TaskRequest createTask, int userId) {
+        Task task = inizilizeTask(createTask, userId);
         Optional<Task> theSameTitleName = repo.findByTitleTask(task.getTitle());
 
         if (theSameTitleName.isPresent()) {
@@ -70,9 +68,8 @@ public class TaskService {
         return task;
     }
 
-    public Task update(int id, TaskRequest taskUpdate, String username) {
-        Login user = repo.initializeUser(username);
-        Task task = inizilizeTask(taskUpdate, user);
+    public Task update(int id, TaskRequest taskUpdate, int userId) {
+        Task task = inizilizeTask(taskUpdate, userId);
         Optional<Task> oldTask = repo.findByIdTask(id);
         if (oldTask.isEmpty()) {
             throw new DataExistsException("Id " + id + " doesn't exist");
@@ -127,7 +124,7 @@ public class TaskService {
         }
     }
 
-    public boolean isRegister(LoginRequest loginRequest) {
+    public Login isRegister(LoginRequest loginRequest) {
         return repo.verify(loginRequest.getUsername(), loginRequest.getPassword());
     }
 
@@ -139,14 +136,14 @@ public class TaskService {
         return task;
     }
 
-    private Task inizilizeTask(TaskRequest createTask, Login user) {
+    private Task inizilizeTask(TaskRequest createTask, int userId) {
         Task task = new Task();
         task.setId(createTask.getId());
         task.setTitle(createTask.getTitle());
         task.setDescription(createTask.getDescription());
         task.setDate(createTask.getDate());
         task.setStatus(createTask.getStatus());
-        task.setUsername_id(user.getId());
+        task.setUsername_id(userId);
         return task;
     }
 }

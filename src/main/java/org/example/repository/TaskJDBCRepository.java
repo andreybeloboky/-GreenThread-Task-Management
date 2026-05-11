@@ -21,12 +21,12 @@ import java.util.function.Function;
 public class TaskJDBCRepository {
 
     private final HikariDataSource dataSource;
-    private static final String SELECT_TASK = "SELECT * FROM tasks t WHERE t.username_id = ? order by t.id";
-    private static final String SELECT_SUBTASKS = "SELECT * FROM TASKS t JOIN subtasks s ON t.id = s.task_id";
+    private static final String SELECT_TASK = "SELECT * FROM tasks t WHERE t.username_id = ? order by t.id FOR UPDATE";
+    private static final String SELECT_SUBTASKS = "SELECT * FROM tasks t JOIN subtasks s ON t.id = s.task_id FOR UPDATE";
     private static final String SELECT_ID_TASK = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
-    private static final String SELECT_ID_SUBTASK = "SELECT * FROM subtasks s WHERE id = ? FOR UPDATE";
-    private static final String SELECT_TITLE_TASK = "SELECT * FROM tasks t WHERE title = ?";
-    private static final String SELECT_TITLE_SUBTASK = "SELECT * FROM subtasks t WHERE title = ?";
+    private static final String SELECT_ID_SUBTASK = "SELECT * FROM tasks t JOIN subtasks s ON t.id = s.task_id WHERE s.id = ? FOR UPDATE";
+    private static final String SELECT_TITLE_TASK = "SELECT * FROM tasks t WHERE title = ? FOR UPDATE";
+    private static final String SELECT_TITLE_SUBTASK = "SELECT * FROM tasks t JOIN subtasks s ON t.id = s.task_id WHERE title = ? FOR UPDATE";
     private static final String INSERT_TASK = "INSERT INTO tasks (title, description, status, duedate, username_id) VALUES (?,?,?,?,?) RETURNING id";
     private static final String INSERT_SUBTASK = "INSERT INTO subtasks (task_id, title, completed) VALUES (?,?,?) RETURNING id";
     private static final String UPDATE_TASK = "UPDATE tasks SET title = ?, description= ?, status= ?, duedate= ? WHERE id = ?";
@@ -39,84 +39,12 @@ public class TaskJDBCRepository {
         this.dataSource = dataSource;
     }
 
-    public ArrayList<Task> getTasksList(Login user) {
-        return getTaskList1(SELECT_TASK, this::getTask, user);
-    }
-
-    private <T> ArrayList<T> getTaskList1(String sql, Function<ResultSet, T> mapper, Login user) {
-        ArrayList<T> list = new ArrayList<>();
-        try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            preparedStatement.setInt(1, user.getId());
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                log.info("Connection opened for take all elements task");
-                while (rs.next()) {
-                    T obj = mapper.apply(rs);
-                    list.add(obj);
-                    log.info("Added an element to list");
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        return list;
-    }
-
-    private <T> ArrayList<T> getTaskList(String sql, Function<ResultSet, T> mapper) {
-        ArrayList<T> list = new ArrayList<>();
-        try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(sql);
-             ResultSet rs = preparedStatement.executeQuery()) {
-            log.info("Connection opened for take all elements task");
-            while (rs.next()) {
-                T obj = mapper.apply(rs);
-                list.add(obj);
-                log.info("Added an element to list");
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        return list;
-    }
-
-    public Login initializeUser(String username) {
-        try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_USERNAME)) {
-            preparedStatement.setString(1, username);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                if (!rs.next()) {
-                    throw new DataExistsException("Empty");
-                }
-                Login user = new Login();
-                user.setId(rs.getInt(1));
-                user.setLogin(rs.getString(2));
-                user.setPassword(rs.getString(3));
-                return user;
-            }
-        } catch (SQLException e) {
-            throw new DataAccessException("Invalid connection", e);
-        }
-    }
-
-    public boolean verify(String username, String password) {
-        try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_USERNAME)) {
-            preparedStatement.setString(1, username);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                if (!rs.next()) {
-                    return false;
-                }
-                String usernameBD = rs.getString(2);
-                String passwordBD = rs.getString(3);
-                return usernameBD.equals(username) && passwordBD.equals(password);
-            }
-        } catch (SQLException e) {
-            throw new DataAccessException("Invalid connection", e);
-        }
+    public ArrayList<Task> getTasksList(int user) {
+        return queryList(SELECT_TASK, this::getTask, user);
     }
 
     public ArrayList<Subtask> getSubtasksList() {
-        return getTaskList(SELECT_SUBTASKS, this::getSubtask);
+        return queryList(SELECT_SUBTASKS, this::getSubtask);
     }
 
     public Optional<Task> findByTitleTask(String title) {
@@ -148,7 +76,7 @@ public class TaskJDBCRepository {
     }
 
     public void setUpdateSubtask(Subtask subtask, int id) {
-        executeUpdate(UPDATE_SUBTASK, id, preparedStatement -> bindSubtaskParams(preparedStatement, subtask), 4);
+        executeUpdate(UPDATE_SUBTASK, id, preparedStatement -> updateSubtaskParams(preparedStatement, subtask), 4);
     }
 
     public void deleteTask(int id) {
@@ -157,6 +85,45 @@ public class TaskJDBCRepository {
 
     public void deleteSubtask(int id) {
         deleteById(DELETE_SUBTASK, id);
+    }
+
+    public Login verify(String username, String password) {
+        Login user = new Login();
+        try (Connection conn = openConnection();
+             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_USERNAME)) {
+            preparedStatement.setString(1, username);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                rs.next();
+                user.setId(rs.getInt(1));
+                user.setLogin(rs.getString(2));
+                user.setPassword(rs.getString(3));
+                if (!user.getLogin().equals(username) && !user.getPassword().equals(password)) {
+                    throw new DataExistsException("Invalid login/password");
+                }
+                return user;
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Invalid connection", e);
+        }
+    }
+
+    private <T> ArrayList<T> queryList(String sql, Function<ResultSet, T> mapper, Object... params) {
+        ArrayList<T> list = new ArrayList<>();
+        try (Connection conn = openConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < params.length; i++) {
+                ps.setObject(i + 1, params[i]);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                log.info("Connection opened for query: {}", sql);
+                while (rs.next()) {
+                    list.add(mapper.apply(rs));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return list;
     }
 
     private void deleteById(String query, int id) {
@@ -288,11 +255,21 @@ public class TaskJDBCRepository {
         }
     }
 
-    private void bindSubtaskParams(PreparedStatement ps, Subtask task) {
+    private void updateSubtaskParams(PreparedStatement ps, Subtask task) {
         try {
             ps.setInt(1, task.getTask_id());
             ps.setString(2, task.getTitle());
             ps.setBoolean(3, task.isCompleted());
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not bind parameters for Task", e);
+        }
+    }
+
+    private void bindSubtaskParams(PreparedStatement ps, Subtask task) {
+        try {
+            ps.setInt(8, task.getTask_id());
+            ps.setString(9, task.getTitle());
+            ps.setBoolean(10, task.isCompleted());
         } catch (SQLException e) {
             throw new DataAccessException("Could not bind parameters for Task", e);
         }

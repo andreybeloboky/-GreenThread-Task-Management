@@ -53,9 +53,8 @@ public class TaskServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String user = (String) req.getSession().getAttribute("user");
-
-        ArrayList<Task> data = task.findAllTask(user);
+        int userId = (Integer) req.getSession().getAttribute("id");
+        ArrayList<Task> data = task.findAllTask(userId);
         setJsonHeaders(resp);
         if (data == null || data.isEmpty()) {
             resp.setStatus(HttpServletResponse.SC_OK);
@@ -75,8 +74,8 @@ public class TaskServlet extends HttpServlet {
         try {
             TaskRequest createTask = mapper.readValue(req.getInputStream(), TaskRequest.class);
             validateData(createTask);
-            String user = (String) req.getSession().getAttribute("user");
-            Task create = task.create(createTask, user);
+            int userId = (Integer) req.getSession().getAttribute("id");
+            Task create = task.create(createTask, userId);
             TaskResponse taskResponse = new TaskResponse(create);
 
             resp.setStatus(HttpServletResponse.SC_CREATED);
@@ -107,7 +106,6 @@ public class TaskServlet extends HttpServlet {
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         setJsonHeaders(resp);
-        String user = (String) req.getSession().getAttribute("user");
         String idParamStr = req.getParameter("id");
         if (idParamStr == null || idParamStr.isBlank()) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -141,10 +139,11 @@ public class TaskServlet extends HttpServlet {
 
         try {
             validateData(updateDate);
-            Task updateData = task.update(idParam, updateDate, user);
-            TaskResponse taskDTO = new TaskResponse(updateData);
+            Integer userId = (Integer) req.getSession().getAttribute("id");
+            Task updateData = task.update(idParam, updateDate, userId);
+            TaskResponse taskResponse = new TaskResponse(updateData);
             resp.setStatus(HttpServletResponse.SC_OK);
-            mapper.writeValue(resp.getWriter(), taskDTO);
+            mapper.writeValue(resp.getWriter(), taskResponse);
         } catch (DataExistsException | InvalidStatusTransitionException e) {
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
