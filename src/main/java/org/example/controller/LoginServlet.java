@@ -15,6 +15,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.example.model.Login;
 import org.example.service.TaskService;
 
+import static org.example.controller.TaskServlet.CONTENT_TYPE_JSON;
+import static org.example.controller.TaskServlet.ENCODING_UTF8;
+
 
 public class LoginServlet extends HttpServlet {
 
@@ -36,8 +39,7 @@ public class LoginServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
+        setJsonHeaders(resp);
 
         LoginRequest login;
         try {
@@ -66,14 +68,12 @@ public class LoginServlet extends HttpServlet {
         session.setAttribute("user", register.getLogin());
         session.setAttribute("id", register.getId());
 
-        Cookie cookie = new Cookie("JSESSIONID", session.getId());
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setSecure(false);
-        cookie.setAttribute("SameSite", "Lax");
-        resp.addCookie(cookie);
-
         resp.setStatus(HttpServletResponse.SC_OK);
         mapper.writeValue(resp.getWriter(), new LoginResponse("ok"));
+    }
+
+    private void setJsonHeaders(HttpServletResponse resp) {
+        resp.setContentType(CONTENT_TYPE_JSON);
+        resp.setCharacterEncoding(ENCODING_UTF8);
     }
 }

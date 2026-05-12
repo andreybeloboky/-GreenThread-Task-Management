@@ -53,7 +53,7 @@ function formatToDatetimeLocal(jacksonStr) {
 }
 
 function showBackendError(responseStatus, errObj) {
-    let message = "Произошла ошибка при обработке запроса.";
+    let message = "Invalid login/password";
 
     if (errObj.error) {
         try {
@@ -469,14 +469,14 @@ function renderTasks(tasks, subtaskMap) {
 async function editSubtaskTitle(subtaskId, currentTitle, isCompleted, parentId) {
     errorAlert.classList.add('d-none');
 
-    const newTitle = prompt("Введите новое название подзадачи (минимум 5 символов):", currentTitle);
+    const newTitle = prompt("Enter a new subtask name (minimum 5 characters):", currentTitle);
 
     if (newTitle === null || newTitle.trim() === currentTitle) return;
 
     const cleanedTitle = newTitle.trim();
 
     if (cleanedTitle.length < 5) {
-        errorAlertText.innerText = "Ошибка: Название подзадачи должно содержать минимум 5 символов.";
+        errorAlertText.innerText = "Error: The name of the subtask must contain at least 5 characters.";
         errorAlert.classList.remove('d-none');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
@@ -503,7 +503,7 @@ async function editSubtaskTitle(subtaskId, currentTitle, isCompleted, parentId) 
             showBackendError(response.status, err);
         }
     } catch (error) {
-        errorAlertText.innerText = "Сетевая ошибка при попытке обновить подзадачу.";
+        errorAlertText.innerText = "Network error when trying to update a subtask.";
         errorAlert.classList.remove('d-none');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }

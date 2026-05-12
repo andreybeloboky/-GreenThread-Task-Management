@@ -94,16 +94,16 @@ public class TaskJDBCRepository {
             preparedStatement.setString(1, username);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 rs.next();
-                user.setId(rs.getInt(1));
                 user.setLogin(rs.getString(2));
                 user.setPassword(rs.getString(3));
-                if (!user.getLogin().equals(username) && !user.getPassword().equals(password)) {
+                if (!user.getLogin().equals(username) || !user.getPassword().equals(password)) {
                     throw new DataExistsException("Invalid login/password");
                 }
+                user.setId(rs.getInt(1));
                 return user;
             }
         } catch (SQLException e) {
-            throw new DataAccessException("Invalid connection", e);
+            throw new DataAccessException("Invalid login/password", e);
         }
     }
 
