@@ -85,8 +85,6 @@ function showBackendError(responseStatus, errObj) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// --- АУТЕНТИФИКАЦИЯ ---
-
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorAlert.classList.add('d-none');
@@ -126,8 +124,6 @@ function logout() {
     connectionStatus.className = "badge bg-warning text-dark";
     connectionStatus.innerText = "Entrance is required";
 }
-
-// --- ЗАГРУЗКА ДАННЫХ ---
 
 async function fetchData() {
     errorAlert.classList.add('d-none');
@@ -169,13 +165,10 @@ async function fetchData() {
     }
 }
 
-// --- СОЗДАНИЕ ЗАДАЧИ ---
-
 taskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorAlert.classList.add('d-none');
 
-    // Чистый payload без поля username_id
     const payload = {
         id: 0,
         title: document.getElementById('taskTitle').value.trim(),
@@ -231,15 +224,12 @@ function openEditModal(taskId) {
     editModalInstance.show();
 }
 
-// --- РЕДАКТИРОВАНИЕ ЗАДАЧИ ---
-
 editTaskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorAlert.classList.add('d-none');
 
     const taskId = parseInt(document.getElementById('editTaskId').value);
 
-    // Чистый payload без поля username_id
     const payload = {
         id: taskId,
         title: document.getElementById('editTaskTitle').value.trim(),
