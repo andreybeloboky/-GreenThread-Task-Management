@@ -21,12 +21,12 @@ import java.util.function.Function;
 public class TaskJDBCRepository {
 
     private final HikariDataSource dataSource;
-    private static final String SELECT_TASK = "SELECT * FROM tasks t WHERE t.username_id = ? order by t.id FOR UPDATE";
-    private static final String SELECT_SUBTASKS = "SELECT * FROM tasks t JOIN subtasks s ON t.id = s.task_id FOR UPDATE";
+    private static final String SELECT_TASK = "SELECT * FROM tasks t WHERE t.username_id = ? ORDER BY t.id FOR UPDATE";
+    private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks s JOIN tasks t ON t.id = s.task_id FOR UPDATE";
     private static final String SELECT_ID_TASK = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
-    private static final String SELECT_ID_SUBTASK = "SELECT * FROM tasks t JOIN subtasks s ON t.id = s.task_id WHERE s.id = ? FOR UPDATE";
+    private static final String SELECT_ID_SUBTASK = "SELECT * FROM subtasks s JOIN tasks t ON t.id = s.task_id WHERE s.id = ? FOR UPDATE";
     private static final String SELECT_TITLE_TASK = "SELECT * FROM tasks t WHERE title = ? FOR UPDATE";
-    private static final String SELECT_TITLE_SUBTASK = "SELECT * FROM tasks t JOIN subtasks s ON t.id = s.task_id WHERE title = ? FOR UPDATE";
+    private static final String SELECT_TITLE_SUBTASK = "SELECT * FROM subtasks s JOIN tasks t ON t.id = s.task_id WHERE s.title = ? FOR UPDATE";
     private static final String INSERT_TASK = "INSERT INTO tasks (title, description, status, duedate, username_id) VALUES (?,?,?,?,?) RETURNING id";
     private static final String INSERT_SUBTASK = "INSERT INTO subtasks (task_id, title, completed) VALUES (?,?,?) RETURNING id";
     private static final String UPDATE_TASK = "UPDATE tasks SET title = ?, description= ?, status= ?, duedate= ? WHERE id = ?";
@@ -76,7 +76,7 @@ public class TaskJDBCRepository {
     }
 
     public void setUpdateSubtask(Subtask subtask, int id) {
-        executeUpdate(UPDATE_SUBTASK, id, preparedStatement -> updateSubtaskParams(preparedStatement, subtask), 4);
+        executeUpdate(UPDATE_SUBTASK, id, preparedStatement -> bindSubtaskParams(preparedStatement, subtask), 4);
     }
 
     public void deleteTask(int id) {
@@ -229,11 +229,11 @@ public class TaskJDBCRepository {
     private Subtask getSubtask(ResultSet rs) {
         try {
             Subtask obj = new Subtask();
-            obj.setId(rs.getInt(7));
-            obj.setTask_id(rs.getInt(8));
-            obj.setTitle(rs.getString(9));
-            obj.setCompleted(rs.getBoolean(10));
-            OffsetDateTime odt = rs.getObject(11, OffsetDateTime.class);
+            obj.setId(rs.getInt(1));
+            obj.setTask_id(rs.getInt(2));
+            obj.setTitle(rs.getString(3));
+            obj.setCompleted(rs.getBoolean(4));
+            OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
             Instant date = odt.toInstant();
             obj.setCreated_at(date);
             return obj;
@@ -255,21 +255,11 @@ public class TaskJDBCRepository {
         }
     }
 
-    private void updateSubtaskParams(PreparedStatement ps, Subtask task) {
+    private void bindSubtaskParams(PreparedStatement ps, Subtask task) {
         try {
             ps.setInt(1, task.getTask_id());
             ps.setString(2, task.getTitle());
             ps.setBoolean(3, task.isCompleted());
-        } catch (SQLException e) {
-            throw new DataAccessException("Could not bind parameters for Task", e);
-        }
-    }
-
-    private void bindSubtaskParams(PreparedStatement ps, Subtask task) {
-        try {
-            ps.setInt(8, task.getTask_id());
-            ps.setString(9, task.getTitle());
-            ps.setBoolean(10, task.isCompleted());
         } catch (SQLException e) {
             throw new DataAccessException("Could not bind parameters for Task", e);
         }
