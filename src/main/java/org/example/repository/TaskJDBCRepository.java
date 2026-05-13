@@ -22,7 +22,7 @@ public class TaskJDBCRepository {
 
     private final HikariDataSource dataSource;
     private static final String SELECT_TASK = "SELECT * FROM tasks t WHERE t.username_id = ? ORDER BY t.id FOR UPDATE";
-    private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks s JOIN tasks t ON t.id = s.task_id FOR UPDATE";
+    private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks s JOIN tasks t ON t.id = s.task_id ORDER BY s.task_id FOR UPDATE";
     private static final String SELECT_ID_TASK = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
     private static final String SELECT_ID_SUBTASK = "SELECT * FROM subtasks s JOIN tasks t ON t.id = s.task_id WHERE s.id = ? FOR UPDATE";
     private static final String SELECT_TITLE_TASK = "SELECT * FROM tasks t WHERE title = ? FOR UPDATE";

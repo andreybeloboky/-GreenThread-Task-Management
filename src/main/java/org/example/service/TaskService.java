@@ -15,6 +15,8 @@ import org.example.repository.TaskJDBCRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 
@@ -103,29 +105,22 @@ public class TaskService {
     }
 
     public void deleteTask(int id) {
-        Optional<Task> task = repo.findByIdTask(id);
-        if (task.isEmpty()) {
-            throw new DataExistsException("This task doesn't exist");
-        }
-        boolean hasSubtasks = repo.getSubtasksList().stream()
-                .anyMatch(subtask -> subtask.getTask_id() == id);
-        if (hasSubtasks) {
-            throw new DataExistsException("This task includes subtasks. You can't delete it");
-        }
-        repo.deleteTask(id);
+        deleteEntity(id, repo::findByIdTask, repo::deleteTask, "This task doesn't exist");
     }
 
     public void deleteSubtask(int id) {
-        Optional<Subtask> task = repo.findByIdSubtask(id);
-        if (task.isEmpty()) {
-            throw new DataExistsException("This task doesn't exist");
-        } else {
-            repo.deleteSubtask(id);
-        }
+        deleteEntity(id, repo::findByIdSubtask, repo::deleteSubtask, "This subtask doesn't exist");
     }
 
     public Login isRegister(LoginRequest loginRequest) {
         return repo.verify(loginRequest.getUsername(), loginRequest.getPassword());
+    }
+
+    private <T> void deleteEntity(int id, Function<Integer, Optional<T>> finder, Consumer<Integer> deleter, String notFoundMessage) {
+        if (finder.apply(id).isEmpty()) {
+            throw new DataExistsException(notFoundMessage);
+        }
+        deleter.accept(id);
     }
 
     private Subtask inizilizeSubtask(SubtaskRequest createTask) {

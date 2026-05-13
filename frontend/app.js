@@ -9,16 +9,29 @@ const errorAlertText = document.getElementById('errorAlertText');
 
 const loginForm = document.getElementById('loginForm');
 const taskForm = document.getElementById('taskForm');
+const editModal = document.getElementById('editTaskModal');
+const editForm = document.getElementById('editTaskForm');
+
+let globalTasks = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     setDefaultDate();
     fetchData();
 });
 
+// Форматирование даты для сервера
 function formatToJacksonUTC(datetimeLocalStr) {
     if (!datetimeLocalStr) return null;
     const d = new Date(datetimeLocalStr);
     return d.toISOString().split('.')[0] + 'Z';
+}
+
+// Форматирование даты для модального окна
+function formatToDatetimeLocal(jacksonStr) {
+    if (!jacksonStr) return '';
+    const date = new Date(jacksonStr);
+    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+    return localDate.toISOString().slice(0, 16);
 }
 
 function setDefaultDate() {
@@ -27,6 +40,7 @@ function setDefaultDate() {
     document.getElementById('taskDate').value = tomorrow.toISOString().slice(0, 16);
 }
 
+// 2. ЛОГИН
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorAlert.classList.add('hidden');
@@ -50,13 +64,15 @@ loginForm.addEventListener('submit', async (e) => {
             logoutBtn.classList.remove('hidden');
             fetchData();
         } else {
-            showError("Неверный логин или пароль");
+            const errData = await response.json().catch(() => ({}));
+            showError(errData.message || "Invalid login/password");
         }
     } catch (error) {
-        showError("Нет связи с сервером");
+        showError("There is no connection to the server.");
     }
 });
 
+// 3. ЗАГРУЗКА ДАННЫХ
 async function fetchData() {
     try {
         const [tasksRes, subtasksRes] = await Promise.all([
@@ -69,122 +85,120 @@ async function fetchData() {
             return;
         }
 
-        const tasks = await tasksRes.json();
-        const subtasks = await subtasksRes.json();
+        if (tasksRes.ok && subtasksRes.ok) {
+            const tasks = await tasksRes.json();
+            const subtasks = await subtasksRes.json();
 
-        // Отладочный лог в консоль браузера (F12), чтобы увидеть структуру данных
-        console.log("Tasks from server:", tasks);
-        console.log("Subtasks from server:", subtasks);
+            // Сортируем основные задачи по ID
+            tasks.sort((a, b) => a.id - b.id);
+            globalTasks = tasks;
 
-        connectionStatus.innerText = "Online";
-        connectionStatus.style.color = "green";
-
-        renderTasks(tasks, subtasks);
+            connectionStatus.innerText = "Online";
+            connectionStatus.style.color = "green";
+            renderTasks(tasks, subtasks);
+        }
     } catch (error) {
-        console.error(error);
-        connectionStatus.innerText = "Ошибка сети";
+        connectionStatus.innerText = "Network error";
         connectionStatus.style.color = "red";
     }
 }
 
+// 4. ОТОБРАЖЕНИЕ (С ИСПРАВЛЕННОЙ СОРТИРОВКОЙ)
 function renderTasks(tasks, subtasks) {
     const container = document.getElementById('taskList');
     container.innerHTML = '';
-
-    if (tasks.length === 0) {
-        container.innerHTML = '<p>Задач пока нет.</p>';
-        return;
-    }
 
     tasks.forEach(task => {
         const taskDiv = document.createElement('div');
         taskDiv.className = 'box';
 
-        // 1. Проверяем, есть ли подзадачи уже внутри объекта Task (из TaskService.java)
-        // 2. Если нет, фильтруем внешний массив subtasks, проверяя оба варианта написания ID
-        let mySubtasks = task.subtasks || [];
+        // 1. Получаем и сортируем подзадачи
+        let mySubtasks = subtasks.filter(s => (s.task_id || s.taskId) == task.id);
+        mySubtasks.sort((a, b) => a.id - b.id);
 
-        if (mySubtasks.length === 0 && subtasks) {
-            mySubtasks = subtasks.filter(s => {
-                const parentId = s.task_id || s.taskId; // Проверка snake_case и camelCase
-                return parentId == task.id; // Нестрогое сравнение (==)
-            });
-        }
+        // 2. Формируем HTML для списка подзадач (только если они есть)
+        let subtasksSection = ""; // По умолчанию пусто
 
-        const subtasksHtml = mySubtasks.length > 0
-            ? `<h4>Подзадачи:</h4><ul>` + mySubtasks.map(s => `
-                <li style="list-style: none; margin-bottom: 5px;">
-                    <label style="${s.completed ? 'text-decoration: line-through; color: gray;' : ''}">
+        if (mySubtasks.length > 0) {
+            const itemsHtml = mySubtasks.map(s => `
+                <li style="list-style: none; display: flex; align-items: center; justify-content: space-between; padding: 5px 0;">
+                    <label style="cursor: pointer; flex-grow: 1; ${s.completed ? 'text-decoration: line-through; color: gray;' : ''}">
                         <input type="checkbox" ${s.completed ? 'checked' : ''}
-                               onchange="toggleSubtask(${s.id}, ${s.completed}, '${s.title.replace(/'/g, "\\'")}', ${task.id})">
+                               onchange="toggleSubtask(${s.id}, ${s.completed}, '${s.title.replace(/'/g, "\\'")}', ${task.id})"
+                               style="width: auto; display: inline; margin-right: 10px;">
                         ${s.title}
                     </label>
-                    <button onclick="deleteSubtask(${s.id})" style="background:none; color:red; border:none; cursor:pointer; font-size:10px;">[удалить]</button>
-                </li>
-            `).join('') + `</ul>`
-            : `<p><small>Нет подзадач</small></p>`;
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="editSubtask(${s.id}, ${task.id}, ${s.completed}, '${s.title.replace(/'/g, "\\'")}')"
+                                style="background:none; border:none; padding:0; cursor:pointer; font-size:1.2em;">✏️</button>
+                        <button onclick="deleteSubtask(${s.id})"
+                                style="background:none; border:none; padding:0; cursor:pointer; font-size:1.2em;">🗑️</button>
+                    </div>
+                </li>`).join('');
 
+            // Если есть хотя бы одна подзадача, создаем "квадрат" с фоном
+            subtasksSection = `
+                <div style="background: #f9f9f9; padding: 10px; border-radius: 5px; margin: 10px 0; border: 1px solid #eee;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 0.9em; color: #666;">Subtasks:</h4>
+                    <ul style="padding: 0; margin: 0;">${itemsHtml}</ul>
+                </div>`;
+        }
+
+        // 3. Собираем итоговую карточку задачи
         taskDiv.innerHTML = `
             <div style="border-bottom: 1px solid #eee; margin-bottom: 10px; padding-bottom: 5px;">
-                <strong style="font-size: 1.2em;">${task.title}</strong>
-                <span style="float: right; font-size: 0.8em; padding: 2px 5px; background: #eee; border-radius: 4px;">${task.status}</span>
+                <strong style="font-size: 1.1em;">${task.title}</strong>
+                <span style="float: right; font-size: 0.8em; color: #777;">${task.status}</span>
             </div>
-            <p style="color: #666;">${task.description || 'Без описания'}</p>
-            <p><small>📅 До: ${new Date(task.date).toLocaleString()}</small></p>
+            <p style="font-size: 0.9em; color: #555; margin-bottom: 10px;">${task.description || '<i></i>'}</p>
+            <p style="margin-bottom: 10px;"><small>📅 Up to: ${new Date(task.date).toLocaleString()}</small></p>
 
-            <div style="background: #fafafa; padding: 10px; border-radius: 4px; margin: 10px 0;">
-                ${subtasksHtml}
+            ${subtasksSection} <div style="display: flex; gap: 5px; margin-top: 10px;">
+                <button onclick="addSubtask(${task.id})" style="background:#28a745; font-size: 0.8em;">➕ Add subtask</button>
+                <button onclick="openEditModal(${task.id})" style="background:#ffc107; color:black; font-size: 0.8em;">✏️ Edit</button>
+                <button onclick="deleteTask(${task.id})" style="background:#dc3545; font-size: 0.8em;">🗑️ DELETE</button>
             </div>
-
-            <button onclick="addSubtask(${task.id})" style="background:#28a745">➕ Подзадача</button>
-            <button onclick="deleteTask(${task.id})" style="background:#dc3545">🗑️ Удалить задачу</button>
         `;
         container.appendChild(taskDiv);
     });
 }
 
-taskForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const payload = {
-        title: document.getElementById('taskTitle').value,
-        description: document.getElementById('taskDescription').value || "",
-        date: formatToJacksonUTC(document.getElementById('taskDate').value),
-        status: document.getElementById('taskStatus').value
-    };
+// Функции модального окна
+function openEditModal(id) {
+    const task = globalTasks.find(t => t.id == id);
+    if (!task) return;
+    document.getElementById('editTaskId').value = task.id;
+    document.getElementById('editTaskTitle').value = task.title;
+    document.getElementById('editTaskDescription').value = task.description || '';
+    document.getElementById('editTaskDate').value = formatToDatetimeLocal(task.date);
+    document.getElementById('editTaskStatus').value = task.status;
+    editModal.classList.remove('hidden');
+}
 
-    const response = await fetch(`${API_BASE_URL}/tasks`, {
-        method: 'POST',
+function closeEditModal() {
+    editModal.classList.add('hidden');
+}
+
+editForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editTaskId').value;
+    const payload = {
+        title: document.getElementById('editTaskTitle').value,
+        description: document.getElementById('editTaskDescription').value,
+        date: formatToJacksonUTC(document.getElementById('editTaskDate').value),
+        status: document.getElementById('editTaskStatus').value
+    };
+    await fetch(`${API_BASE_URL}/tasks?id=${id}`, {
+        method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
-
-    if (response.ok) {
-        taskForm.reset();
-        setDefaultDate();
-        fetchData();
-    }
+    closeEditModal();
+    fetchData();
 });
 
-async function deleteTask(id) {
-    if (!confirm("Удалить всю задачу?")) return;
-    await fetch(`${API_BASE_URL}/tasks?id=${id}`, { method: 'DELETE', credentials: 'include' });
-    fetchData();
-}
-
-async function addSubtask(taskId) {
-    const title = prompt("Что нужно сделать?");
-    if (!title) return;
-
-    await fetch(`${API_BASE_URL}/subtasks`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task_id: taskId, title: title, completed: false })
-    });
-    fetchData();
-}
-
+// Действия с подзадачами
 async function toggleSubtask(id, currentStatus, title, taskId) {
     await fetch(`${API_BASE_URL}/subtasks?id=${id}`, {
         method: 'PUT',
@@ -195,11 +209,60 @@ async function toggleSubtask(id, currentStatus, title, taskId) {
     fetchData();
 }
 
+async function addSubtask(taskId) {
+    const title = prompt("What needs to be done?");
+    if (!title) return;
+    await fetch(`${API_BASE_URL}/subtasks`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_id: taskId, title: title, completed: false })
+    });
+    fetchData();
+}
+
+async function editSubtask(id, taskId, completed, currentTitle) {
+    const newTitle = prompt("New subtask title:", currentTitle);
+    if (!newTitle) return;
+    await fetch(`${API_BASE_URL}/subtasks?id=${id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_id: taskId, title: newTitle, completed: completed })
+    });
+    fetchData();
+}
+
 async function deleteSubtask(id) {
-    if (!confirm("Удалить подзадачу?")) return;
+    if (!confirm("Delete?")) return;
     await fetch(`${API_BASE_URL}/subtasks?id=${id}`, { method: 'DELETE', credentials: 'include' });
     fetchData();
 }
+
+async function deleteTask(id) {
+    if (!confirm("Delete whole task?")) return;
+    await fetch(`${API_BASE_URL}/tasks?id=${id}`, { method: 'DELETE', credentials: 'include' });
+    fetchData();
+}
+
+taskForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+        title: document.getElementById('taskTitle').value,
+        description: document.getElementById('taskDescription').value || "",
+        date: formatToJacksonUTC(document.getElementById('taskDate').value),
+        status: document.getElementById('taskStatus').value
+    };
+    await fetch(`${API_BASE_URL}/tasks`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    taskForm.reset();
+    setDefaultDate();
+    fetchData();
+});
 
 function logout() {
     loginView.classList.remove('hidden');

@@ -12,7 +12,7 @@ CREATE TABLE tasks
     CONSTRAINT fk_username
         FOREIGN KEY (username_id)
             REFERENCES users (id)
-            ON DELETE RESTRICT
+            ON DELETE CASCADE
 );
 
 CREATE TABLE subtasks
@@ -25,7 +25,7 @@ CREATE TABLE subtasks
     CONSTRAINT fk_task
         FOREIGN KEY (task_id)
             REFERENCES tasks (id)
-            ON DELETE RESTRICT
+            ON DELETE CASCADE
 );
 
 CREATE TABLE users(
