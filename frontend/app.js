@@ -14,10 +14,32 @@ const editForm = document.getElementById('editTaskForm');
 
 let globalTasks = [];
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     setDefaultDate();
-    fetchData();
+    await checkSession();
 });
+
+async function checkSession() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/tasks`, { credentials: 'include' });
+
+        if (res.status === 200) {
+            // Пользователь авторизован
+            loginView.classList.add('hidden');
+            dashboardView.classList.remove('hidden');
+            logoutBtn.classList.remove('hidden');
+            fetchData();
+        } else {
+            // Пользователь НЕ авторизован
+            loginView.classList.remove('hidden');
+            dashboardView.classList.add('hidden');
+            logoutBtn.classList.add('hidden');
+        }
+    } catch (e) {
+        console.log("Network error during session check");
+    }
+}
+
 
 // Форматирование даты для сервера
 function formatToJacksonUTC(datetimeLocalStr) {
