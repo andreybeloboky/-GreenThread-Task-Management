@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -27,10 +26,9 @@ import java.util.*;
 @WebServlet("/subtasks")
 public class SubtaskServlet extends HttpServlet {
 
-    private TaskService task;
+    private TaskService service;
     private final ObjectMapper mapper = new ObjectMapper();
     private Validator val;
-    private HikariDataSource ds;
     public static final String CONTENT_TYPE_JSON = "application/json";
     public static final String ENCODING_UTF8 = "UTF-8";
 
@@ -40,14 +38,8 @@ public class SubtaskServlet extends HttpServlet {
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         try {
-            Object dsObj = getServletContext().getAttribute("datasource");
-            Object valObj = getServletContext().getAttribute("validator");
-            if (!(dsObj instanceof HikariDataSource) || !(valObj instanceof Validator)) {
-                throw new ServletException("Required context attributes 'datasource' or 'validator' are missing or invalid");
-            }
-            ds = (HikariDataSource) dsObj;
-            val = (Validator) valObj;
-            task = new TaskService(ds);
+            val = (Validator) getServletContext().getAttribute("validator");
+            service = (TaskService) getServletContext().getAttribute("service");
         } catch (Exception e) {
             throw new ServletException("Failed to initialize the library", e);
         }
@@ -55,7 +47,7 @@ public class SubtaskServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        ArrayList<Subtask> data = task.findAllSubtask();
+        ArrayList<Subtask> data = service.findAllSubtask();
         setJsonHeaders(resp);
         if (data == null || data.isEmpty()) {
             resp.setStatus(HttpServletResponse.SC_OK);
@@ -72,7 +64,7 @@ public class SubtaskServlet extends HttpServlet {
         try {
             SubtaskRequest subtaskReq = mapper.readValue(req.getInputStream(), SubtaskRequest.class);
             validateData(subtaskReq);
-            Subtask subtask = task.createSubtask(subtaskReq);
+            Subtask subtask = service.createSubtask(subtaskReq);
             SubtaskResponse subtaskResponse = new SubtaskResponse(subtask);
 
             resp.setContentType("application/json");
@@ -137,7 +129,7 @@ public class SubtaskServlet extends HttpServlet {
 
         try {
             validateData(updateDate);
-            Subtask subtask = task.updateSubtask(idParam, updateDate);
+            Subtask subtask = service.updateSubtask(idParam, updateDate);
             SubtaskResponse taskDTO = new SubtaskResponse(subtask);
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), taskDTO);
@@ -158,7 +150,7 @@ public class SubtaskServlet extends HttpServlet {
             return;
         }
         try {
-            task.deleteSubtask(idParam);
+            service.deleteSubtask(idParam);
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } catch (DataExistsException e) {
             setJsonHeaders(resp);

@@ -1,5 +1,6 @@
 package org.example.initialize;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.ServletContextEvent;
@@ -9,6 +10,8 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.example.model.Task;
+import org.example.service.TaskService;
 
 @WebListener
 @Slf4j
@@ -35,6 +38,9 @@ public class AppInitializer implements ServletContextListener {
         factory = Validation.buildDefaultValidatorFactory();
         Validator validator = factory.getValidator();
         sce.getServletContext().setAttribute("validator", validator);
+
+        TaskService service = new TaskService(dataSource);
+        sce.getServletContext().setAttribute("service", service);
     }
 
     @Override

@@ -27,7 +27,7 @@ import java.util.*;
 @WebServlet("/tasks")
 public class TaskServlet extends HttpServlet {
 
-    private TaskService task;
+    private TaskService service;
     private final ObjectMapper mapper = new ObjectMapper();
     private Validator val;
     public static final String CONTENT_TYPE_JSON = "application/json";
@@ -39,13 +39,8 @@ public class TaskServlet extends HttpServlet {
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         try {
-            Object dsObj = getServletContext().getAttribute("datasource");
-            Object valObj = getServletContext().getAttribute("validator");
-            if (!(dsObj instanceof HikariDataSource ds) || !(valObj instanceof Validator)) {
-                throw new ServletException("Required context attributes 'datasource' or 'validator' are missing or invalid");
-            }
-            val = (Validator) valObj;
-            task = new TaskService(ds);
+            val = (Validator) getServletContext().getAttribute("validator");
+            service = (TaskService) getServletContext().getAttribute("service");
         } catch (Exception e) {
             throw new ServletException("Failed to initialize the library", e);
         }
@@ -54,7 +49,7 @@ public class TaskServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         int userId = (Integer) req.getSession().getAttribute("id");
-        ArrayList<Task> data = task.findAllTask(userId);
+        ArrayList<Task> data = service.findAllTask(userId);
         setJsonHeaders(resp);
         if (data == null || data.isEmpty()) {
             resp.setStatus(HttpServletResponse.SC_OK);
@@ -75,7 +70,7 @@ public class TaskServlet extends HttpServlet {
             TaskRequest createTask = mapper.readValue(req.getInputStream(), TaskRequest.class);
             validateData(createTask);
             int userId = (Integer) req.getSession().getAttribute("id");
-            Task create = task.create(createTask, userId);
+            Task create = service.create(createTask, userId);
             TaskResponse taskResponse = new TaskResponse(create);
 
             resp.setStatus(HttpServletResponse.SC_CREATED);
@@ -140,7 +135,7 @@ public class TaskServlet extends HttpServlet {
         try {
             validateData(updateDate);
             Integer userId = (Integer) req.getSession().getAttribute("id");
-            Task updateData = task.update(idParam, updateDate, userId);
+            Task updateData = service.update(idParam, updateDate, userId);
             TaskResponse taskResponse = new TaskResponse(updateData);
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), taskResponse);
@@ -161,7 +156,7 @@ public class TaskServlet extends HttpServlet {
             return;
         }
         try {
-            task.deleteTask(idParam);
+            service.deleteTask(idParam);
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } catch (DataExistsException e) {
             setJsonHeaders(resp);
