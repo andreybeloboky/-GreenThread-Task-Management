@@ -1,7 +1,7 @@
 CREATE TABLE tasks
 (
     id          INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    title       VARCHAR NOT NULL UNIQUE,
+    title       VARCHAR NOT NULL,
     description TEXT    NOT NULL,
     status      VARCHAR NOT NULL DEFAULT 'PENDING',
     duedate     TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -9,6 +9,7 @@ CREATE TABLE tasks
     CONSTRAINT title_length_check CHECK (char_length(title) BETWEEN 5 AND 100),
     CONSTRAINT description_length_check CHECK (char_length(description) <= 500),
     CONSTRAINT duedate_in_future CHECK (duedate > current_date),
+    CONSTRAINT unique_title_per_user UNIQUE (title, username_id),
     CONSTRAINT fk_username
         FOREIGN KEY (username_id)
             REFERENCES users (id)
