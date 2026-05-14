@@ -47,11 +47,11 @@ public class TaskService {
     public Task create(TaskRequest createTask, int userId) {
         Task task = inizilizeTask(createTask, userId);
         Optional<Task> theSameTitleName = repo.findByTitleTask(task.getTitle());
-
         if (theSameTitleName.isPresent()) {
-            throw new DataExistsException("This task is already created");
+            if (theSameTitleName.get().getUsername_id() == task.getUsername_id()) {
+                throw new DataExistsException("This task is already created");
+            }
         }
-
         int id = repo.insertTask(task);
         task.setId(id);
         return task;

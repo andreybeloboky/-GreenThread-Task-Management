@@ -220,6 +220,7 @@ public class TaskJDBCRepository {
             OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
             Instant date = odt.toInstant();
             obj.setDate(date);
+            obj.setUsername_id(6);
             return obj;
         } catch (SQLException e) {
             throw new DataAccessException("Could not bind parameters for Task", e);
