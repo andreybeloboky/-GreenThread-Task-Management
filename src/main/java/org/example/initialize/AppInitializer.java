@@ -26,13 +26,13 @@ public class AppInitializer implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         log.debug("dataSource works");
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(URL);
-        config.setUsername(LOGIN);
-        config.setPassword(PASSWORD);
-        config.setMaximumPoolSize(10);
-        config.setDriverClassName("org.postgresql.Driver");
-        dataSource = new HikariDataSource(config);
+        HikariConfig configHikari = new HikariConfig();
+        configHikari.setJdbcUrl(URL);
+        configHikari.setUsername(LOGIN);
+        configHikari.setPassword(PASSWORD);
+        configHikari.setMaximumPoolSize(10);
+        configHikari.setDriverClassName("org.postgresql.Driver");
+        dataSource = new HikariDataSource(configHikari);
         sce.getServletContext().setAttribute("datasource", dataSource);
 
         factory = Validation.buildDefaultValidatorFactory();
