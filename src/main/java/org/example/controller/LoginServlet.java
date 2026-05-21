@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
 import org.example.dto.LoginRequest;
 import org.example.dto.LoginResponse;
+import org.example.exception.DataNotExistsException;
 import org.example.exception.ErrorResponse;
 
 import java.io.IOException;
@@ -50,7 +51,7 @@ public class LoginServlet extends HttpServlet {
         Login register;
         try {
             register = authService.isRegister(login);
-        } catch (RuntimeException e) {
+        } catch (DataNotExistsException e) {
             resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             mapper.writeValue(resp.getWriter(), e.getMessage());
             return;
