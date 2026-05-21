@@ -5,7 +5,7 @@ import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
-import org.example.exception.ErrorResponse;
+import org.example.exception.SuccessResponse;
 
 import java.io.IOException;
 
@@ -35,6 +35,6 @@ public class LogoutServlet extends HttpServlet {
         resp.addCookie(cookie);
 
         resp.setContentType("application/json");
-        mapper.writeValue(resp.getWriter(), new ErrorResponse("logged_out"));
+        mapper.writeValue(resp.getWriter(), new SuccessResponse("logged_out"));
     }
 }

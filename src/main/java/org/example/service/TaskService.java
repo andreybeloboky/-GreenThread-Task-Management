@@ -1,13 +1,12 @@
 package org.example.service;
 
 import com.zaxxer.hikari.HikariDataSource;
-import org.example.dto.LoginRequest;
 import org.example.dto.SubtaskRequest;
 import org.example.dto.TaskRequest;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataExistsException;
+import org.example.exception.DataNotExistsException;
 import org.example.exception.InvalidStatusTransitionException;
-import org.example.model.Login;
 import org.example.model.Subtask;
 import org.example.model.Task;
 import org.example.repository.TaskJDBCRepository;
@@ -74,7 +73,7 @@ public class TaskService {
         Task task = inizilizeTask(taskRequest, userId);
         Optional<Task> oldTask = repo.findByIdTask(id);
         if (oldTask.isEmpty()) {
-            throw new DataExistsException("Id " + id + " doesn't exist");
+            throw new DataNotExistsException("Id " + id + " doesn't exist");
         }
 
         TaskStatus oldStatus = oldTask.get().getStatus();
@@ -88,7 +87,7 @@ public class TaskService {
             throw new InvalidStatusTransitionException("Invalid status transition");
         }
 
-        repo.setUpdateTask(task, id);
+        repo.updateTask(task, id);
         task.setId(id);
         return task;
     }
@@ -97,7 +96,7 @@ public class TaskService {
         Subtask subtask = inizilizeSubtask(subtaskRequest);
         Optional<Subtask> oldTask = repo.findByIdSubtask(id);
         if (oldTask.isEmpty()) {
-            throw new DataExistsException("Id " + id + " doesn't exist");
+            throw new DataNotExistsException("Id " + id + " doesn't exist");
         }
         repo.updateSubtask(subtask, id);
         subtask.setId(id);
@@ -114,7 +113,7 @@ public class TaskService {
 
     private <T> void deleteEntity(int id, Function<Integer, Optional<T>> finder, Consumer<Integer> deleter, String notFoundMessage) {
         if (finder.apply(id).isEmpty()) {
-            throw new DataExistsException(notFoundMessage);
+            throw new DataNotExistsException(notFoundMessage);
         }
         deleter.accept(id);
     }

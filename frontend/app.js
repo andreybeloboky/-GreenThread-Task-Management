@@ -40,15 +40,12 @@ async function checkSession() {
     }
 }
 
-
-// Форматирование даты для сервера
 function formatToJacksonUTC(datetimeLocalStr) {
     if (!datetimeLocalStr) return null;
     const d = new Date(datetimeLocalStr);
     return d.toISOString().split('.')[0] + 'Z';
 }
 
-// Форматирование даты для модального окна
 function formatToDatetimeLocal(jacksonStr) {
     if (!jacksonStr) return '';
     const date = new Date(jacksonStr);
@@ -62,7 +59,6 @@ function setDefaultDate() {
     document.getElementById('taskDate').value = tomorrow.toISOString().slice(0, 16);
 }
 
-// 2. ЛОГИН
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorAlert.classList.add('hidden');
@@ -94,7 +90,6 @@ loginForm.addEventListener('submit', async (e) => {
     }
 });
 
-// 3. ЗАГРУЗКА ДАННЫХ
 async function fetchData() {
     try {
         const [tasksRes, subtasksRes] = await Promise.all([
@@ -111,7 +106,6 @@ async function fetchData() {
             const tasks = await tasksRes.json();
             const subtasks = await subtasksRes.json();
 
-            // Сортируем основные задачи по ID
             tasks.sort((a, b) => a.id - b.id);
             globalTasks = tasks;
 
@@ -125,7 +119,6 @@ async function fetchData() {
     }
 }
 
-// 4. ОТОБРАЖЕНИЕ (С ИСПРАВЛЕННОЙ СОРТИРОВКОЙ)
 function renderTasks(tasks, subtasks) {
     const container = document.getElementById('taskList');
     container.innerHTML = '';
@@ -134,12 +127,10 @@ function renderTasks(tasks, subtasks) {
         const taskDiv = document.createElement('div');
         taskDiv.className = 'box';
 
-        // 1. Получаем и сортируем подзадачи
         let mySubtasks = subtasks.filter(s => (s.task_id || s.taskId) == task.id);
         mySubtasks.sort((a, b) => a.id - b.id);
 
-        // 2. Формируем HTML для списка подзадач (только если они есть)
-        let subtasksSection = ""; // По умолчанию пусто
+        let subtasksSection = "";
 
         if (mySubtasks.length > 0) {
             const itemsHtml = mySubtasks.map(s => `
@@ -158,7 +149,6 @@ function renderTasks(tasks, subtasks) {
                     </div>
                 </li>`).join('');
 
-            // Если есть хотя бы одна подзадача, создаем "квадрат" с фоном
             subtasksSection = `
                 <div style="background: #f9f9f9; padding: 10px; border-radius: 5px; margin: 10px 0; border: 1px solid #eee;">
                     <h4 style="margin: 0 0 10px 0; font-size: 0.9em; color: #666;">Subtasks:</h4>
@@ -166,7 +156,6 @@ function renderTasks(tasks, subtasks) {
                 </div>`;
         }
 
-        // 3. Собираем итоговую карточку задачи
         taskDiv.innerHTML = `
             <div style="border-bottom: 1px solid #eee; margin-bottom: 10px; padding-bottom: 5px;">
                 <strong style="font-size: 1.1em;">${task.title}</strong>
@@ -185,7 +174,6 @@ function renderTasks(tasks, subtasks) {
     });
 }
 
-// Функции модального окна
 function openEditModal(id) {
     const task = globalTasks.find(t => t.id == id);
     if (!task) return;
@@ -220,7 +208,6 @@ editForm.addEventListener('submit', async (e) => {
     fetchData();
 });
 
-// Действия с подзадачами
 async function toggleSubtask(id, currentStatus, title, taskId) {
     await fetch(`${API_BASE_URL}/subtasks?id=${id}`, {
         method: 'PUT',
@@ -286,7 +273,15 @@ taskForm.addEventListener('submit', async (e) => {
     fetchData();
 });
 
-function logout() {
+async function logout() {
+    try {
+        await fetch(`${API_BASE_URL}/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+    } catch (e) {
+        console.error("Logout request failed", e);
+    }
     loginView.classList.remove('hidden');
     dashboardView.classList.add('hidden');
     logoutBtn.classList.add('hidden');

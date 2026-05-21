@@ -4,8 +4,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.example.controller.TaskStatus;
 import org.example.exception.DataAccessException;
-import org.example.exception.DataExistsException;
-import org.example.model.Login;
 import org.example.model.Subtask;
 import org.example.model.Task;
 
@@ -39,27 +37,27 @@ public class TaskJDBCRepository {
     }
 
     public ArrayList<Task> loadTasksList(int user) {
-        return queryList(SELECT_TASK, this::getTask, user);
+        return queryList(SELECT_TASK, this::loadTask, user);
     }
 
     public ArrayList<Subtask> loadSubtasksList() {
-        return queryList(SELECT_SUBTASKS, this::getSubtask);
+        return queryList(SELECT_SUBTASKS, this::loadSubtask);
     }
 
     public Optional<Task> findByTitleTask(String title) {
-        return find(SELECT_TITLE_TASK, title, this::getTask);
+        return find(SELECT_TITLE_TASK, title, this::loadTask);
     }
 
     public Optional<Subtask> findByTitleSubtask(String title) {
-        return find(SELECT_TITLE_SUBTASK, title, this::getSubtask);
+        return find(SELECT_TITLE_SUBTASK, title, this::loadSubtask);
     }
 
     public Optional<Task> findByIdTask(int id) {
-        return find(SELECT_ID_TASK, id, this::getTask);
+        return find(SELECT_ID_TASK, id, this::loadTask);
     }
 
     public Optional<Subtask> findByIdSubtask(int id) {
-        return find(SELECT_ID_SUBTASK, id, this::getSubtask);
+        return find(SELECT_ID_SUBTASK, id, this::loadSubtask);
     }
 
     public int insertTask(Task task) {
@@ -70,7 +68,7 @@ public class TaskJDBCRepository {
         return executeInsert(INSERT_SUBTASK, ps -> bindSubtaskParams(ps, subtask));
     }
 
-    public void setUpdateTask(Task task, int id) {
+    public void updateTask(Task task, int id) {
         executeUpdate(UPDATE_TASK, id, preparedStatement -> bindTaskParams(preparedStatement, task), 5);
     }
 
@@ -189,7 +187,7 @@ public class TaskJDBCRepository {
         }
     }
 
-    private Task getTask(ResultSet rs) {
+    private Task loadTask(ResultSet rs) {
         try {
             Task obj = new Task();
             obj.setId(rs.getInt(1));
@@ -206,7 +204,7 @@ public class TaskJDBCRepository {
         }
     }
 
-    private Subtask getSubtask(ResultSet rs) {
+    private Subtask loadSubtask(ResultSet rs) {
         try {
             Subtask obj = new Subtask();
             obj.setId(rs.getInt(1));
