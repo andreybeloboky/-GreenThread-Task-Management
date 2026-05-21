@@ -49,7 +49,8 @@ public class SubtaskServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        ArrayList<Subtask> data = service.findAllSubtask();
+        int userId = (Integer) req.getSession().getAttribute("id");
+        ArrayList<Subtask> data = service.findAllSubtask(userId);
         setJsonHeaders(resp);
         if (data == null || data.isEmpty()) {
             resp.setStatus(HttpServletResponse.SC_OK);

@@ -20,7 +20,7 @@ public class TaskJDBCRepository {
 
     private final HikariDataSource dataSource;
     private static final String SELECT_TASK = "SELECT * FROM tasks t WHERE t.username_id = ? ORDER BY t.id FOR UPDATE";
-    private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks s JOIN tasks t ON t.id = s.task_id ORDER BY s.task_id FOR UPDATE";
+    private static final String SELECT_SUBTASKS = "SELECT * FROM subtasks s JOIN tasks t ON t.id = s.task_id WHERE username_id =? ORDER BY s.task_id FOR UPDATE";
     private static final String SELECT_ID_TASK = "SELECT * FROM tasks t WHERE id = ? FOR UPDATE";
     private static final String SELECT_ID_SUBTASK = "SELECT * FROM subtasks s JOIN tasks t ON t.id = s.task_id WHERE s.id = ? FOR UPDATE";
     private static final String SELECT_TITLE_TASK = "SELECT * FROM tasks t WHERE title = ? FOR UPDATE";
@@ -36,12 +36,12 @@ public class TaskJDBCRepository {
         this.dataSource = dataSource;
     }
 
-    public ArrayList<Task> loadTasksList(int user) {
-        return queryList(SELECT_TASK, this::loadTask, user);
+    public ArrayList<Task> loadTasksList(int userId) {
+        return queryList(SELECT_TASK, this::loadTask, userId);
     }
 
-    public ArrayList<Subtask> loadSubtasksList() {
-        return queryList(SELECT_SUBTASKS, this::loadSubtask);
+    public ArrayList<Subtask> loadSubtasksList(int userId) {
+        return queryList(SELECT_SUBTASKS, this::loadSubtask, userId);
     }
 
     public Optional<Task> findByTitleTask(String title) {
@@ -84,13 +84,11 @@ public class TaskJDBCRepository {
         deleteById(DELETE_SUBTASK, id);
     }
 
-    private <T> ArrayList<T> queryList(String sql, Function<ResultSet, T> mapper, Object... params) {
+    private <T> ArrayList<T> queryList(String sql, Function<ResultSet, T> mapper, int userId) {
         ArrayList<T> list = new ArrayList<>();
         try (Connection conn = openConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            for (int i = 0; i < params.length; i++) {
-                ps.setObject(i + 1, params[i]);
-            }
+            ps.setObject(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 log.info("Connection opened for query: {}", sql);
                 while (rs.next()) {
