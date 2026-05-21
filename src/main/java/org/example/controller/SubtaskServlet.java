@@ -105,7 +105,6 @@ public class SubtaskServlet extends HttpServlet {
             mapper.writeValue(resp.getWriter(), Map.of("error", "Missing id parameter"));
             return;
         }
-
         int idParam;
         try {
             idParam = Integer.parseInt(idParamStr);
@@ -117,7 +116,6 @@ public class SubtaskServlet extends HttpServlet {
             mapper.writeValue(resp.getWriter(), Map.of("error", "Invalid id parameter"));
             return;
         }
-
         SubtaskRequest updateDate;
         try {
             updateDate = mapper.readValue(req.getInputStream(), SubtaskRequest.class);
@@ -129,7 +127,6 @@ public class SubtaskServlet extends HttpServlet {
             ));
             return;
         }
-
         try {
             validateData(updateDate);
             Subtask subtask = service.updateSubtask(idParam, updateDate);

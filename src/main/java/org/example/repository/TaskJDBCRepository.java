@@ -40,7 +40,7 @@ public class TaskJDBCRepository {
         return queryList(SELECT_TASK, this::loadTask, userId);
     }
 
-    public ArrayList<Subtask> loadSubtasksList(int userId) {
+    public ArrayList<Subtask> loadSubtasksListByUserId(int userId) {
         return queryList(SELECT_SUBTASKS, this::loadSubtask, userId);
     }
 

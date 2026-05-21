@@ -28,12 +28,10 @@ public class LogoutServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         HttpSession session = req.getSession(false);
         if (session != null) session.invalidate();
-
         Cookie cookie = new Cookie("JSESSIONID", "");
         cookie.setMaxAge(0);
-        cookie.setPath("/");
+        cookie.setPath("/GreenThread-Task-Management");
         resp.addCookie(cookie);
-
         resp.setContentType("application/json");
         mapper.writeValue(resp.getWriter(), new SuccessResponse("logged_out"));
     }

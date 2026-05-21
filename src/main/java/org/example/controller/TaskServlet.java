@@ -59,7 +59,6 @@ public class TaskServlet extends HttpServlet {
         List<TaskResponse> dtoList = data.stream()
                 .map(TaskResponse::new)
                 .toList();
-
         resp.setStatus(HttpServletResponse.SC_OK);
         mapper.writeValue(resp.getWriter(), dtoList);
     }

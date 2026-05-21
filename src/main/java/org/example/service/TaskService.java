@@ -29,7 +29,7 @@ public class TaskService {
 
     public ArrayList<Task> findAllTask(int userId) {
         ArrayList<Task> tasks = repo.loadTasksList(userId);
-        ArrayList<Subtask> subtasks = repo.loadSubtasksList(userId);
+        ArrayList<Subtask> subtasks = repo.loadSubtasksListByUserId(userId);
         for (Task task : tasks) {
             List<Subtask> related = subtasks.stream()
                     .filter(s -> s.getTaskId() == task.getId())
@@ -40,7 +40,7 @@ public class TaskService {
     }
 
     public ArrayList<Subtask> findAllSubtask(int userId) {
-        return repo.loadSubtasksList(userId);
+        return repo.loadSubtasksListByUserId(userId);
     }
 
     public Task create(TaskRequest taskRequest, int userId) {

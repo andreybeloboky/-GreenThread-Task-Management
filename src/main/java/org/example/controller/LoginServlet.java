@@ -33,7 +33,6 @@ public class LoginServlet extends HttpServlet {
         } catch (Exception e) {
             throw new ServletException("Failed to initialize the library", e);
         }
-
     }
 
     @Override
