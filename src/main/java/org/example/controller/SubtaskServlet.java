@@ -27,7 +27,7 @@ import java.util.*;
 public class SubtaskServlet extends HttpServlet {
 
     private TaskService service;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private ObjectMapper mapper;
     private Validator val;
     public static final String CONTENT_TYPE_JSON = "application/json";
     public static final String ENCODING_UTF8 = "UTF-8";
@@ -35,11 +35,12 @@ public class SubtaskServlet extends HttpServlet {
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         try {
             val = (Validator) getServletContext().getAttribute("validator");
             service = (TaskService) getServletContext().getAttribute("service");
+            mapper = (ObjectMapper) getServletContext().getAttribute("mapper");
+            mapper.registerModule(new JavaTimeModule());
+            mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         } catch (Exception e) {
             throw new ServletException("Failed to initialize the library", e);
         }

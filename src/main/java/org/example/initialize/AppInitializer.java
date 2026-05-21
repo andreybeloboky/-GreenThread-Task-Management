@@ -41,6 +41,9 @@ public class AppInitializer implements ServletContextListener {
 
         TaskService service = new TaskService(dataSource);
         sce.getServletContext().setAttribute("service", service);
+
+        ObjectMapper mapper = new ObjectMapper();
+        sce.getServletContext().setAttribute("mapper", mapper);
     }
 
     @Override

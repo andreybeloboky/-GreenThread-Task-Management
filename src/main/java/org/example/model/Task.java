@@ -16,6 +16,6 @@ public class Task {
     private String description;
     private Instant date;
     private TaskStatus status;
-    private int username_id;
+    private int usernameId;
     List<Subtask> subtasks = new ArrayList<>();
 }

@@ -9,7 +9,7 @@ import java.time.Instant;
 @Setter
 public class Subtask {
     private int id;
-    private int task_id;
+    private int taskId;
     private String title;
     private boolean completed;
     private Instant created_at;

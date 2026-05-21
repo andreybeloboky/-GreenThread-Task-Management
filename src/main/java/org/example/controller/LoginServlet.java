@@ -21,16 +21,15 @@ import static org.example.controller.TaskServlet.ENCODING_UTF8;
 
 public class LoginServlet extends HttpServlet {
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private ObjectMapper mapper;
     private TaskService service;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         try {
-            Object dsObj = getServletContext().getAttribute("datasource");
-            HikariDataSource ds = (HikariDataSource) dsObj;
-            service = new TaskService(ds);
+            service = (TaskService) getServletContext().getAttribute("service");
+            mapper = (ObjectMapper) getServletContext().getAttribute("mapper");
         } catch (Exception e) {
             throw new ServletException("Failed to initialize the library", e);
         }
@@ -53,14 +52,8 @@ public class LoginServlet extends HttpServlet {
         try {
             register = service.isRegister(login);
         } catch (RuntimeException e) {
-            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            mapper.writeValue(resp.getWriter(), e.getMessage());
-            return;
-        }
-
-        if (register.getLogin() == null) {
             resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            mapper.writeValue(resp.getWriter(), new ErrorResponse("Invalid credentials"));
+            mapper.writeValue(resp.getWriter(), e.getMessage());
             return;
         }
 

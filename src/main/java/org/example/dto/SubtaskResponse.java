@@ -6,7 +6,6 @@ import lombok.Getter;
 import org.example.model.Subtask;
 
 import java.time.Instant;
-import java.time.OffsetDateTime;
 
 @Getter
 public class SubtaskResponse {
@@ -29,7 +28,7 @@ public class SubtaskResponse {
 
     public SubtaskResponse(Subtask subtask) {
         this.id = subtask.getId();
-        this.taskId = subtask.getTask_id();
+        this.taskId = subtask.getTaskId();
         this.title = subtask.getTitle();
         this.completed = subtask.isCompleted();
         this.created_at = subtask.getCreated_at();

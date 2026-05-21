@@ -29,11 +29,11 @@ public class TaskService {
     }
 
     public ArrayList<Task> findAllTask(int userId) {
-        ArrayList<Task> tasks = repo.getTasksList(userId);
-        ArrayList<Subtask> subtasks = repo.getSubtasksList();
+        ArrayList<Task> tasks = repo.loadTasksList(userId);
+        ArrayList<Subtask> subtasks = repo.loadSubtasksList();
         for (Task task : tasks) {
             List<Subtask> related = subtasks.stream()
-                    .filter(s -> s.getTask_id() == task.getId())
+                    .filter(s -> s.getTaskId() == task.getId())
                     .collect(Collectors.toList());
             task.setSubtasks(related);
         }
@@ -41,14 +41,14 @@ public class TaskService {
     }
 
     public ArrayList<Subtask> findAllSubtask() {
-        return repo.getSubtasksList();
+        return repo.loadSubtasksList();
     }
 
     public Task create(TaskRequest createTask, int userId) {
         Task task = inizilizeTask(createTask, userId);
         Optional<Task> theSameTitleName = repo.findByTitleTask(task.getTitle());
         if (theSameTitleName.isPresent()) {
-            if (theSameTitleName.get().getUsername_id() == task.getUsername_id()) {
+            if (theSameTitleName.get().getUsernameId() == task.getUsernameId()) {
                 throw new DataExistsException("This task is already created");
             }
         }
@@ -57,17 +57,17 @@ public class TaskService {
         return task;
     }
 
-    public Subtask createSubtask(SubtaskRequest createTask) {
-        Subtask task = inizilizeSubtask(createTask);
-        Optional<Subtask> theSameTitleName = repo.findByTitleSubtask(task.getTitle());
+    public Subtask createSubtask(SubtaskRequest subtaskRequest) {
+        Subtask subtask = inizilizeSubtask(subtaskRequest);
+        Optional<Subtask> theSameTitleName = repo.findByTitleSubtask(subtask.getTitle());
 
         if (theSameTitleName.isPresent()) {
-            throw new DataExistsException("This task is already created");
+            throw new DataExistsException("This subtask is already created");
         }
 
-        int id = repo.insertSubtask(task);
-        task.setId(id);
-        return task;
+        int id = repo.insertSubtask(subtask);
+        subtask.setId(id);
+        return subtask;
     }
 
     public Task update(int id, TaskRequest taskUpdate, int userId) {
@@ -94,14 +94,14 @@ public class TaskService {
     }
 
     public Subtask updateSubtask(int id, SubtaskRequest taskUpdate) {
-        Subtask task = inizilizeSubtask(taskUpdate);
+        Subtask subtask = inizilizeSubtask(taskUpdate);
         Optional<Subtask> oldTask = repo.findByIdSubtask(id);
         if (oldTask.isEmpty()) {
             throw new DataExistsException("Id " + id + " doesn't exist");
         }
-        repo.setUpdateSubtask(task, id);
-        task.setId(id);
-        return task;
+        repo.updateSubtask(subtask, id);
+        subtask.setId(id);
+        return subtask;
     }
 
     public void deleteTask(int id) {
@@ -125,7 +125,7 @@ public class TaskService {
 
     private Subtask inizilizeSubtask(SubtaskRequest createTask) {
         Subtask task = new Subtask();
-        task.setTask_id(createTask.getTask_id());
+        task.setTaskId(createTask.getTask_id());
         task.setTitle(createTask.getTitle());
         task.setCompleted(createTask.isCompleted());
         return task;
@@ -138,7 +138,7 @@ public class TaskService {
         task.setDescription(createTask.getDescription());
         task.setDate(createTask.getDate());
         task.setStatus(createTask.getStatus());
-        task.setUsername_id(userId);
+        task.setUsernameId(userId);
         return task;
     }
 }

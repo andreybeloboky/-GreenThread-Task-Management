@@ -39,11 +39,11 @@ public class TaskJDBCRepository {
         this.dataSource = dataSource;
     }
 
-    public ArrayList<Task> getTasksList(int user) {
+    public ArrayList<Task> loadTasksList(int user) {
         return queryList(SELECT_TASK, this::getTask, user);
     }
 
-    public ArrayList<Subtask> getSubtasksList() {
+    public ArrayList<Subtask> loadSubtasksList() {
         return queryList(SELECT_SUBTASKS, this::getSubtask);
     }
 
@@ -75,7 +75,7 @@ public class TaskJDBCRepository {
         executeUpdate(UPDATE_TASK, id, preparedStatement -> bindTaskParams(preparedStatement, task), 5);
     }
 
-    public void setUpdateSubtask(Subtask subtask, int id) {
+    public void updateSubtask(Subtask subtask, int id) {
         executeUpdate(UPDATE_SUBTASK, id, preparedStatement -> bindSubtaskParams(preparedStatement, subtask), 4);
     }
 
@@ -220,7 +220,7 @@ public class TaskJDBCRepository {
             OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
             Instant date = odt.toInstant();
             obj.setDate(date);
-            obj.setUsername_id(6);
+            obj.setUsernameId(6);
             return obj;
         } catch (SQLException e) {
             throw new DataAccessException("Could not bind parameters for Task", e);
@@ -231,7 +231,7 @@ public class TaskJDBCRepository {
         try {
             Subtask obj = new Subtask();
             obj.setId(rs.getInt(1));
-            obj.setTask_id(rs.getInt(2));
+            obj.setTaskId(rs.getInt(2));
             obj.setTitle(rs.getString(3));
             obj.setCompleted(rs.getBoolean(4));
             OffsetDateTime odt = rs.getObject(5, OffsetDateTime.class);
@@ -250,7 +250,7 @@ public class TaskJDBCRepository {
             ps.setString(3, String.valueOf(Objects.requireNonNullElse(task.getStatus(), "PENDING")));
             OffsetDateTime odt = task.getDate().atOffset(ZoneOffset.UTC);
             ps.setObject(4, odt);
-            ps.setInt(5, task.getUsername_id());
+            ps.setInt(5, task.getUsernameId());
         } catch (SQLException e) {
             throw new DataAccessException("Could not bind parameters for Task", e);
         }
@@ -258,7 +258,7 @@ public class TaskJDBCRepository {
 
     private void bindSubtaskParams(PreparedStatement ps, Subtask task) {
         try {
-            ps.setInt(1, task.getTask_id());
+            ps.setInt(1, task.getTaskId());
             ps.setString(2, task.getTitle());
             ps.setBoolean(3, task.isCompleted());
         } catch (SQLException e) {
