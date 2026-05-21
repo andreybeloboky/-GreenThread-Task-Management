@@ -33,7 +33,6 @@ public class TaskJDBCRepository {
     private static final String UPDATE_SUBTASK = "UPDATE subtasks SET task_id = ?, title = ?, completed= ? WHERE id = ?";
     private static final String DELETE_TASK = "DELETE FROM tasks WHERE id = ?";
     private static final String DELETE_SUBTASK = "DELETE FROM subtasks WHERE id = ?";
-    private static final String SELECT_USERNAME = "SELECT * FROM users WHERE username =?";
 
     public TaskJDBCRepository(HikariDataSource dataSource) {
         this.dataSource = dataSource;
@@ -85,26 +84,6 @@ public class TaskJDBCRepository {
 
     public void deleteSubtask(int id) {
         deleteById(DELETE_SUBTASK, id);
-    }
-
-    public Login verify(String username, String password) {
-        Login user = new Login();
-        try (Connection conn = openConnection();
-             PreparedStatement preparedStatement = conn.prepareStatement(SELECT_USERNAME)) {
-            preparedStatement.setString(1, username);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                rs.next();
-                user.setLogin(rs.getString(2));
-                user.setPassword(rs.getString(3));
-                if (!user.getLogin().equals(username) || !user.getPassword().equals(password)) {
-                    throw new DataExistsException("Invalid login/password");
-                }
-                user.setId(rs.getInt(1));
-                return user;
-            }
-        } catch (SQLException e) {
-            throw new DataAccessException("Invalid login/password", e);
-        }
     }
 
     private <T> ArrayList<T> queryList(String sql, Function<ResultSet, T> mapper, Object... params) {

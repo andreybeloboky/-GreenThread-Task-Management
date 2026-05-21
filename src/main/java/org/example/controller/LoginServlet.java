@@ -1,7 +1,6 @@
 package org.example.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
@@ -13,7 +12,7 @@ import java.io.IOException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.example.model.Login;
-import org.example.service.TaskService;
+import org.example.service.AuthService;
 
 import static org.example.controller.TaskServlet.CONTENT_TYPE_JSON;
 import static org.example.controller.TaskServlet.ENCODING_UTF8;
@@ -22,14 +21,14 @@ import static org.example.controller.TaskServlet.ENCODING_UTF8;
 public class LoginServlet extends HttpServlet {
 
     private ObjectMapper mapper;
-    private TaskService service;
+    private AuthService authService;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         try {
-            service = (TaskService) getServletContext().getAttribute("service");
             mapper = (ObjectMapper) getServletContext().getAttribute("mapper");
+            authService = (AuthService) getServletContext().getAttribute("auth");
         } catch (Exception e) {
             throw new ServletException("Failed to initialize the library", e);
         }
@@ -50,7 +49,7 @@ public class LoginServlet extends HttpServlet {
         }
         Login register;
         try {
-            register = service.isRegister(login);
+            register = authService.isRegister(login);
         } catch (RuntimeException e) {
             resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             mapper.writeValue(resp.getWriter(), e.getMessage());

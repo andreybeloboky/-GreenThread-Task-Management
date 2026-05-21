@@ -112,10 +112,6 @@ public class TaskService {
         deleteEntity(id, repo::findByIdSubtask, repo::deleteSubtask, "This subtask doesn't exist");
     }
 
-    public Login isRegister(LoginRequest loginRequest) {
-        return repo.verify(loginRequest.getUsername(), loginRequest.getPassword());
-    }
-
     private <T> void deleteEntity(int id, Function<Integer, Optional<T>> finder, Consumer<Integer> deleter, String notFoundMessage) {
         if (finder.apply(id).isEmpty()) {
             throw new DataExistsException(notFoundMessage);

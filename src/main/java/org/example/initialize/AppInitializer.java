@@ -11,6 +11,7 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.example.model.Task;
+import org.example.service.AuthService;
 import org.example.service.TaskService;
 
 @WebListener
@@ -44,6 +45,10 @@ public class AppInitializer implements ServletContextListener {
 
         ObjectMapper mapper = new ObjectMapper();
         sce.getServletContext().setAttribute("mapper", mapper);
+
+        AuthService authService = new AuthService(dataSource);
+        sce.getServletContext().setAttribute("auth", authService);
+
     }
 
     @Override
