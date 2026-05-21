@@ -40,15 +40,14 @@ public class AppInitializer implements ServletContextListener {
         Validator validator = factory.getValidator();
         sce.getServletContext().setAttribute("validator", validator);
 
-        TaskService service = new TaskService(dataSource);
-        sce.getServletContext().setAttribute("service", service);
+        TaskService taskService = new TaskService(dataSource);
+        sce.getServletContext().setAttribute("service", taskService);
 
         ObjectMapper mapper = new ObjectMapper();
         sce.getServletContext().setAttribute("mapper", mapper);
 
         AuthService authService = new AuthService(dataSource);
         sce.getServletContext().setAttribute("auth", authService);
-
     }
 
     @Override

@@ -16,6 +16,7 @@ import jakarta.validation.Validator;
 import org.example.dto.SubtaskRequest;
 import org.example.dto.SubtaskResponse;
 import org.example.exception.DataExistsException;
+import org.example.exception.DataNotExistsException;
 import org.example.exception.InvalidStatusTransitionException;
 import org.example.model.Subtask;
 import org.example.service.TaskService;
@@ -99,7 +100,7 @@ public class SubtaskServlet extends HttpServlet {
 
         String idParamStr = req.getParameter("id");
         if (idParamStr == null || idParamStr.isBlank()) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
             mapper.writeValue(resp.getWriter(), Map.of("error", "Missing id parameter"));
             return;
         }
@@ -153,7 +154,7 @@ public class SubtaskServlet extends HttpServlet {
         try {
             service.deleteSubtask(idParam);
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
-        } catch (DataExistsException e) {
+        } catch (DataNotExistsException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
             mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
@@ -165,8 +166,8 @@ public class SubtaskServlet extends HttpServlet {
         resp.setCharacterEncoding(ENCODING_UTF8);
     }
 
-    private void validateData(SubtaskRequest task) throws JsonProcessingException {
-        Set<ConstraintViolation<SubtaskRequest>> violations = val.validate(task);
+    private void validateData(SubtaskRequest subtaskRequest) throws JsonProcessingException {
+        Set<ConstraintViolation<SubtaskRequest>> violations = val.validate(subtaskRequest);
         if (!violations.isEmpty()) {
             Map<String, String> errors = new HashMap<>();
             for (ConstraintViolation<SubtaskRequest> violation : violations) {

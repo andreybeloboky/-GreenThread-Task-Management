@@ -44,8 +44,8 @@ public class TaskService {
         return repo.loadSubtasksList();
     }
 
-    public Task create(TaskRequest createTask, int userId) {
-        Task task = inizilizeTask(createTask, userId);
+    public Task create(TaskRequest taskRequest, int userId) {
+        Task task = inizilizeTask(taskRequest, userId);
         Optional<Task> theSameTitleName = repo.findByTitleTask(task.getTitle());
         if (theSameTitleName.isPresent()) {
             if (theSameTitleName.get().getUsernameId() == task.getUsernameId()) {
@@ -70,8 +70,8 @@ public class TaskService {
         return subtask;
     }
 
-    public Task update(int id, TaskRequest taskUpdate, int userId) {
-        Task task = inizilizeTask(taskUpdate, userId);
+    public Task update(int id, TaskRequest taskRequest, int userId) {
+        Task task = inizilizeTask(taskRequest, userId);
         Optional<Task> oldTask = repo.findByIdTask(id);
         if (oldTask.isEmpty()) {
             throw new DataExistsException("Id " + id + " doesn't exist");
@@ -93,8 +93,8 @@ public class TaskService {
         return task;
     }
 
-    public Subtask updateSubtask(int id, SubtaskRequest taskUpdate) {
-        Subtask subtask = inizilizeSubtask(taskUpdate);
+    public Subtask updateSubtask(int id, SubtaskRequest subtaskRequest) {
+        Subtask subtask = inizilizeSubtask(subtaskRequest);
         Optional<Subtask> oldTask = repo.findByIdSubtask(id);
         if (oldTask.isEmpty()) {
             throw new DataExistsException("Id " + id + " doesn't exist");
@@ -119,21 +119,21 @@ public class TaskService {
         deleter.accept(id);
     }
 
-    private Subtask inizilizeSubtask(SubtaskRequest createTask) {
-        Subtask task = new Subtask();
-        task.setTaskId(createTask.getTask_id());
-        task.setTitle(createTask.getTitle());
-        task.setCompleted(createTask.isCompleted());
-        return task;
+    private Subtask inizilizeSubtask(SubtaskRequest subtaskRequest) {
+        Subtask subtask = new Subtask();
+        subtask.setTaskId(subtaskRequest.getTask_id());
+        subtask.setTitle(subtaskRequest.getTitle());
+        subtask.setCompleted(subtaskRequest.isCompleted());
+        return subtask;
     }
 
-    private Task inizilizeTask(TaskRequest createTask, int userId) {
+    private Task inizilizeTask(TaskRequest taskRequest, int userId) {
         Task task = new Task();
-        task.setId(createTask.getId());
-        task.setTitle(createTask.getTitle());
-        task.setDescription(createTask.getDescription());
-        task.setDate(createTask.getDate());
-        task.setStatus(createTask.getStatus());
+        task.setId(taskRequest.getId());
+        task.setTitle(taskRequest.getTitle());
+        task.setDescription(taskRequest.getDescription());
+        task.setDate(taskRequest.getDate());
+        task.setStatus(taskRequest.getStatus());
         task.setUsernameId(userId);
         return task;
     }
