@@ -5,7 +5,7 @@ import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
-import org.example.exception.SuccessResponse;
+import org.example.dto.SuccessResponse;
 
 import java.io.IOException;
 

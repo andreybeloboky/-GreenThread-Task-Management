@@ -15,7 +15,7 @@ import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
 import org.example.dto.SubtaskRequest;
 import org.example.dto.SubtaskResponse;
-import org.example.exception.DataExistsException;
+import org.example.exception.DataConflictException;
 import org.example.exception.DataNotExistsException;
 import org.example.exception.InvalidStatusTransitionException;
 import org.example.model.Subtask;
@@ -75,7 +75,7 @@ public class SubtaskServlet extends HttpServlet {
             String appName = req.getContextPath();
             resp.setHeader("Location", appName + "/subtasks/" + subtaskResponse.getId());
             mapper.writeValue(resp.getWriter(), subtaskResponse);
-        } catch (DataExistsException e) {
+        } catch (DataConflictException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
@@ -133,7 +133,7 @@ public class SubtaskServlet extends HttpServlet {
             SubtaskResponse taskDTO = new SubtaskResponse(subtask);
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), taskDTO);
-        } catch (DataExistsException | InvalidStatusTransitionException e) {
+        } catch (DataConflictException | InvalidStatusTransitionException e) {
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
         } catch (ValidationException e) {

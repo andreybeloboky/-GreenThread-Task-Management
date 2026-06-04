@@ -4,7 +4,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.example.dto.SubtaskRequest;
 import org.example.dto.TaskRequest;
 import org.example.controller.TaskStatus;
-import org.example.exception.DataExistsException;
+import org.example.exception.DataConflictException;
 import org.example.exception.DataNotExistsException;
 import org.example.exception.InvalidStatusTransitionException;
 import org.example.model.Subtask;
@@ -48,7 +48,7 @@ public class TaskService {
         Optional<Task> theSameTitleName = repo.findByTitleTask(task.getTitle());
         if (theSameTitleName.isPresent()) {
             if (theSameTitleName.get().getUsernameId() == task.getUsernameId()) {
-                throw new DataExistsException("This task is already created");
+                throw new DataConflictException("This task is already created");
             }
         }
         int id = repo.insertTask(task);
@@ -61,7 +61,7 @@ public class TaskService {
         Optional<Subtask> theSameTitleName = repo.findByTitleSubtask(subtask.getTitle());
 
         if (theSameTitleName.isPresent()) {
-            throw new DataExistsException("This subtask is already created");
+            throw new DataConflictException("This subtask is already created");
         }
 
         int id = repo.insertSubtask(subtask);

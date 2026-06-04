@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
+import org.example.dto.ErrorResponse;
 import org.example.dto.LoginRequest;
 import org.example.dto.LoginResponse;
 import org.example.exception.DataNotExistsException;
-import org.example.exception.ErrorResponse;
 
 import java.io.IOException;
 

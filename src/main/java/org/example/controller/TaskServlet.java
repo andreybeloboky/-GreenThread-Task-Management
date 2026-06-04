@@ -15,7 +15,7 @@ import jakarta.validation.ValidationException;
 import jakarta.validation.Validator;
 import org.example.dto.TaskRequest;
 import org.example.dto.TaskResponse;
-import org.example.exception.DataExistsException;
+import org.example.exception.DataConflictException;
 import org.example.exception.InvalidStatusTransitionException;
 import org.example.model.Task;
 import org.example.service.TaskService;
@@ -77,7 +77,7 @@ public class TaskServlet extends HttpServlet {
             mapper.writeValue(resp.getWriter(), taskResponse);
             String appName = req.getContextPath();
             resp.setHeader("Location", appName + "/tasks/" + taskResponse.getId());
-        } catch (DataExistsException e) {
+        } catch (DataConflictException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
@@ -138,7 +138,7 @@ public class TaskServlet extends HttpServlet {
             TaskResponse taskResponse = new TaskResponse(updateData);
             resp.setStatus(HttpServletResponse.SC_OK);
             mapper.writeValue(resp.getWriter(), taskResponse);
-        } catch (DataExistsException | InvalidStatusTransitionException e) {
+        } catch (DataConflictException | InvalidStatusTransitionException e) {
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
             mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));
         } catch (ValidationException e) {
@@ -157,7 +157,7 @@ public class TaskServlet extends HttpServlet {
         try {
             service.deleteTask(idParam);
             resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
-        } catch (DataExistsException e) {
+        } catch (DataConflictException e) {
             setJsonHeaders(resp);
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
             mapper.writeValue(resp.getWriter(), Map.of("error", e.getMessage()));

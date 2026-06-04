@@ -3,7 +3,7 @@ package org.example.repository;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.example.exception.DataAccessException;
-import org.example.exception.DataExistsException;
+import org.example.exception.DataConflictException;
 import org.example.model.Login;
 
 import java.sql.Connection;
@@ -31,7 +31,7 @@ public class AuthRepo {
                 user.setLogin(rs.getString(2));
                 user.setPassword(rs.getString(3));
                 if (!user.getLogin().equals(username) || !user.getPassword().equals(password)) {
-                    throw new DataExistsException("Invalid login/password");
+                    throw new DataConflictException("Invalid login/password");
                 }
                 user.setId(rs.getInt(1));
                 return user;
